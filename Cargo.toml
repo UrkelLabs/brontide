@@ -7,3 +7,8 @@ license = "MIT"
 edition = "2018"
 
 [dependencies]
+chacha20-poly1305-aead = "0.1.2"
+hkdf = "0.7"
+sha2 = "0.8.0"
+
+
