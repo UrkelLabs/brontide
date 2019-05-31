@@ -1,34 +1,32 @@
 use chacha20_poly1305_aead;
-use hkdf::Hkdf;
 
 use crate::common::ROTATION_INTERVAL;
 use crate::util::expand;
 
-//TODO does this need to be public?
-struct CipherState {
+pub(crate) struct CipherState {
     secret_key: [u8; 32],
     salt: [u8; 32],
+    //ChaCha20_poly1305 calls for a 96 bit nonce, with a 32 bit counter. Therefore we are only
+    //going to use u32 as our counter as opposed to u64.
     inner_nonce: u32,
+    //See note above, this represents the 96 bit nonce as a byte array (8 * 12) = 96
+    //TODO remove this I think
     nonce: [u8; 12],
 }
 
 impl CipherState {
+    pub(crate) fn new(key: [u8; 32], salt: [u8; 32]) -> Self {
+        CipherState {
+            secret_key: key,
+            salt,
+            inner_nonce: 0,
+            nonce: [0; 12],
+        }
+    }
+
     fn update(&mut self) -> [u8; 12] {
         self.nonce[4..].copy_from_slice(&self.inner_nonce.to_le_bytes());
         self.nonce
-    }
-
-    //Todo maybe this a new function.
-    pub fn init_key(&mut self, key: Buffer) {
-        self.secret_key = key;
-        self.nonce = 0;
-        self.update();
-    }
-
-    //New with salt
-    pub fn init_salt(&mut self, key: Buffer, salt: Buffer) {
-        self.salt = salt;
-        self.init_key(key);
     }
 
     pub fn rotate_key(&mut self) {
@@ -43,7 +41,7 @@ impl CipherState {
     }
 
     //TODO this needs heavy testing.
-    pub fn encrypt(&mut self, pt: Buffer, ad: Buffer) -> Buffer {
+    pub fn encrypt(&mut self, pt: &[u8], ad: &[u8]) -> Vec<u8> {
         let mut ciphertext = Vec::with_capacity(pt.len());
 
         //TODO can't unwrap, need actual error handling here
@@ -63,15 +61,15 @@ impl CipherState {
             self.rotate_key();
         }
 
-        Buffer::from(tag.to_vec())
+        tag.to_vec()
     }
 
-    pub fn decrypt(&mut self, ct: Buffer, tag: Buffer, ad: Buffer) -> bool {
+    pub fn decrypt(&mut self, ct: &[u8], tag: &[u8], ad: &[u8]) -> bool {
         let mut plaintext = Vec::with_capacity(ct.len());
 
         let result = chacha20_poly1305_aead::decrypt(
             &self.secret_key,
-            &self.iv,
+            &self.nonce,
             &ad,
             &tag,
             &ct,
@@ -79,17 +77,17 @@ impl CipherState {
         );
 
         match result {
-            Err(_) => false,
             Ok(_) => {
-                self.nonce += 1;
+                self.inner_nonce += 1;
                 self.update();
 
-                if self.nonce == ROTATION_INTERVAL {
+                if self.inner_nonce == ROTATION_INTERVAL {
                     self.rotate_key();
                 }
 
                 true
             }
+            Err(_) => false,
         }
     }
 }
