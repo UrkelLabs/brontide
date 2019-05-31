@@ -25,7 +25,7 @@ impl CipherState {
     }
 
     fn update(&mut self) -> [u8; 12] {
-        self.nonce[4..].copy_from_slice(&self.inner_nonce.to_le_bytes());
+        self.nonce[4..8].copy_from_slice(&self.inner_nonce.to_le_bytes());
         self.nonce
     }
 
@@ -90,4 +90,66 @@ impl CipherState {
             Err(_) => false,
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+    use hex;
+
+    #[test]
+    fn test_cipher_state_new() {
+        //TODO use random bytes
+        let mut key = [0_u8; 32];
+        key.copy_from_slice(
+            &hex::decode("2121212121212121212121212121212121212121212121212121212121212121")
+                .unwrap(),
+        );
+
+        let mut salt = [0_u8; 32];
+        salt.copy_from_slice(
+            &hex::decode("1111111111111111111111111111111111111111111111111111111111111111")
+                .unwrap(),
+        );
+
+        let cipher = CipherState::new(key, salt);
+
+        assert_eq!(cipher.secret_key, key);
+
+        assert_eq!(cipher.salt, salt);
+    }
+
+    #[test]
+    fn test_cipher_state_rotate_key() {
+        //TODO use random bytes here.
+        //TODO one test with random bytes, one not
+        let mut key = [0_u8; 32];
+        key.copy_from_slice(
+            &hex::decode("2121212121212121212121212121212121212121212121212121212121212121")
+                .unwrap(),
+        );
+
+        let mut salt = [0_u8; 32];
+        salt.copy_from_slice(
+            &hex::decode("1111111111111111111111111111111111111111111111111111111111111111")
+                .unwrap(),
+        );
+
+        let mut cipher = CipherState::new(key, salt);
+
+        cipher.rotate_key();
+
+        dbg!(&cipher.secret_key);
+
+        //Key and salt should be different.
+        assert_ne!(cipher.secret_key, key);
+        assert_ne!(cipher.salt, salt);
+
+        //Counter should be reset
+        assert_eq!(cipher.inner_nonce, 0);
+    }
+
+    // #[test]
+    // fn test_cipher_state_rotate_key() {}
 }
