@@ -1,0 +1,40 @@
+language: rust
+sudo: required
+dist: trusty
+# Need to cache the whole `.cargo` directory to keep .crates.toml for
+# cargo-update to work
+cache:
+  directories:
+    - /home/travis/.cargo
+
+# But don't cache the cargo registry
+addons:
+    apt:
+        packages:
+            - libssl-dev
+if: tag IS present OR type = pull_request
+rust:
+  - stable
+  - beta
+  - nightly
+matrix:
+  allow_failures:
+    - rust: nightly
+
+before_cache:
+  - rm -rf /home/travis/.cargo/registry
+  - |
+  if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
+    cargo install cargo-tarpaulin -f
+  fi
+
+script:
+- cargo clean
+- cargo build
+- cargo test
+
+after_success: |
+  if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
+     cargo tarpaulin --out Xml
+     bash <(curl -s https://codecov.io/bash)
+  fi

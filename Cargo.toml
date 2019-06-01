@@ -11,4 +11,7 @@ chacha20-poly1305-aead = "0.1.2"
 hkdf = "0.7"
 sha2 = "0.8.0"
 
+[dev-dependencies]
+hex = "0.3.2"
+
 
