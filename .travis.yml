@@ -24,9 +24,9 @@ matrix:
 before_cache:
   - rm -rf /home/travis/.cargo/registry
   - |
-  if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
-    cargo install cargo-tarpaulin -f
-  fi
+    if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
+      cargo install cargo-tarpaulin -f
+    fi
 
 script:
 - cargo clean
