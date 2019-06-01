@@ -1,4 +1,5 @@
 language: rust
+if: tag IS present OR type IS pull_request
 rust:
   - stable
   - beta
