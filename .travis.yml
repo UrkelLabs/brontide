@@ -1,6 +1,13 @@
 language: rust
 sudo: required
 dist: trusty
+# Need to cache the whole `.cargo` directory to keep .crates.toml for
+# cargo-update to work
+cache:
+  directories:
+    - /home/travis/.cargo
+
+# But don't cache the cargo registry
 addons:
     apt:
         packages:
@@ -18,6 +25,9 @@ before_cache: |
   if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
     cargo install cargo-tarpaulin -f
   fi
+
+before_cache:
+  - rm -rf /home/travis/.cargo/registry
 
 script:
 - cargo clean
