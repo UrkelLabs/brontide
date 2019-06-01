@@ -3,6 +3,12 @@ use chacha20_poly1305_aead;
 use crate::common::ROTATION_INTERVAL;
 use crate::util::expand;
 
+//TODO more tests
+//TODO make keys their own types
+//TODO benchmarks
+//TODO rename inner nonce to counter, and remove nonce -> Only using it when needed.
+//TODO add result types, and a custom error type.
+
 pub(crate) struct CipherState {
     secret_key: [u8; 32],
     salt: [u8; 32],
@@ -98,6 +104,26 @@ mod tests {
     use super::*;
     use hex;
 
+    fn cipher_state_setup() -> (CipherState, [u8; 32], [u8; 32]) {
+        let mut key = [0_u8; 32];
+        key.copy_from_slice(
+            &hex::decode("2121212121212121212121212121212121212121212121212121212121212121")
+                .unwrap(),
+        );
+
+        let mut salt = [0_u8; 32];
+        salt.copy_from_slice(
+            &hex::decode("1111111111111111111111111111111111111111111111111111111111111111")
+                .unwrap(),
+        );
+
+        (CipherState::new(key, salt), key, salt)
+    }
+
+    // fn cipher_state_setup_random() {
+
+    // }
+
     #[test]
     fn test_cipher_state_new() {
         //TODO use random bytes
@@ -140,8 +166,6 @@ mod tests {
 
         cipher.rotate_key();
 
-        dbg!(&cipher.secret_key);
-
         //Key and salt should be different.
         assert_ne!(cipher.secret_key, key);
         assert_ne!(cipher.salt, salt);
@@ -150,6 +174,22 @@ mod tests {
         assert_eq!(cipher.inner_nonce, 0);
     }
 
-    // #[test]
-    // fn test_cipher_state_rotate_key() {}
+    #[test]
+    fn test_cipher_state_encrypt() {
+        let (mut cipher, key, salt) = cipher_state_setup();
+
+        let plain_text = b"hello, friends";
+
+        let associated_data = b"test123";
+
+        let cipher_data = cipher.encrypt(plain_text, associated_data);
+
+        assert_ne!(cipher_data, plain_text);
+    }
+
+    //TODO add a test of key rotation after encrypting so manually make cipher.nonce ===
+    //ROTATION_INTERVAL - 1
+    //
+    //TODO test panics as well, apparently there is a macro for this.
+    //TODO fuzzing -> See rust bitcoin lib
 }
