@@ -58,8 +58,7 @@ impl CipherState {
             &ad,
             &pt,
             &mut ciphertext,
-        )
-        .unwrap();
+        )?;
 
         self.inner_nonce += 1;
         self.update();
