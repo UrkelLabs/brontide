@@ -1,2 +1,2 @@
 # Rust-Brontide
-[![CircleCI](https://circleci.com/gh/HandshakeAlliance/rust-brontide.svg?style=svg)](https://circleci.com/gh/HandshakeAlliance/rust-brontide)
+[![Build Status](https://travis-ci.org/HandshakeAlliance/rust-brontide.svg?branch=master)](https://travis-ci.org/HandshakeAlliance/rust-brontide)
