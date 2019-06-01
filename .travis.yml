@@ -12,7 +12,7 @@ addons:
     apt:
         packages:
             - libssl-dev
-if: tag IS present OR type = pull_request
+if: branch = master OR type = pull_request
 rust:
   - stable
   - beta
