@@ -21,13 +21,12 @@ matrix:
   allow_failures:
     - rust: nightly
 
-before_cache: |
+before_cache:
+  - rm -rf /home/travis/.cargo/registry
+  - |
   if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
     cargo install cargo-tarpaulin -f
   fi
-
-before_cache:
-  - rm -rf /home/travis/.cargo/registry
 
 script:
 - cargo clean
