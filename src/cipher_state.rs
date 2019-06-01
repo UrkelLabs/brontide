@@ -2,6 +2,7 @@ use chacha20_poly1305_aead;
 
 use crate::common::ROTATION_INTERVAL;
 use crate::util::expand;
+use crate::Result;
 
 //TODO more tests
 //TODO make keys their own types
@@ -47,7 +48,7 @@ impl CipherState {
     }
 
     //TODO this needs heavy testing.
-    pub fn encrypt(&mut self, pt: &[u8], ad: &[u8]) -> Vec<u8> {
+    pub fn encrypt(&mut self, pt: &[u8], ad: &[u8]) -> Result<Vec<u8>> {
         let mut ciphertext = Vec::with_capacity(pt.len());
 
         //TODO can't unwrap, need actual error handling here
@@ -67,7 +68,7 @@ impl CipherState {
             self.rotate_key();
         }
 
-        tag.to_vec()
+        Ok(tag.to_vec())
     }
 
     pub fn decrypt(&mut self, ct: &[u8], tag: &[u8], ad: &[u8]) -> bool {
@@ -182,7 +183,11 @@ mod tests {
 
         let associated_data = b"test123";
 
-        let cipher_data = cipher.encrypt(plain_text, associated_data);
+        let result = cipher.encrypt(plain_text, associated_data);
+
+        assert!(result.is_ok());
+
+        let cipher_data = result.unwrap();
 
         assert_ne!(cipher_data, plain_text);
     }
