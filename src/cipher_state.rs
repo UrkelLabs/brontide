@@ -51,7 +51,6 @@ impl CipherState {
     pub fn encrypt(&mut self, pt: &[u8], ad: &[u8]) -> Result<Vec<u8>> {
         let mut ciphertext = Vec::with_capacity(pt.len());
 
-        //TODO can't unwrap, need actual error handling here
         let tag = chacha20_poly1305_aead::encrypt(
             &self.secret_key,
             &self.nonce,
