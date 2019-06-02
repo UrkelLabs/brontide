@@ -7,18 +7,13 @@ use crate::Result;
 //TODO more tests
 //TODO make keys their own types
 //TODO benchmarks
-//TODO rename inner nonce to counter, and remove nonce -> Only using it when needed.
-//TODO add result types, and a custom error type.
 
 pub(crate) struct CipherState {
     secret_key: [u8; 32],
     salt: [u8; 32],
     //ChaCha20_poly1305 calls for a 96 bit nonce, with a 32 bit counter. Therefore we are only
     //going to use u32 as our counter as opposed to u64.
-    inner_nonce: u32,
-    //See note above, this represents the 96 bit nonce as a byte array (8 * 12) = 96
-    //TODO remove this I think
-    nonce: [u8; 12],
+    counter: u32,
 }
 
 impl CipherState {
@@ -26,14 +21,14 @@ impl CipherState {
         CipherState {
             secret_key: key,
             salt,
-            inner_nonce: 0,
-            nonce: [0; 12],
+            counter: 0,
         }
     }
 
-    fn update(&mut self) -> [u8; 12] {
-        self.nonce[4..8].copy_from_slice(&self.inner_nonce.to_le_bytes());
-        self.nonce
+    fn get_nonce(&self) -> [u8; 12] {
+        let mut nonce = [0_u8; 12];
+        nonce[4..8].copy_from_slice(&self.counter.to_le_bytes());
+        nonce
     }
 
     pub fn rotate_key(&mut self) {
@@ -43,26 +38,21 @@ impl CipherState {
         self.salt.copy_from_slice(&salt);
         self.secret_key.copy_from_slice(&next);
 
-        self.inner_nonce = 0;
-        self.update();
+        self.counter = 0;
     }
 
     //TODO this needs heavy testing.
     pub fn encrypt(&mut self, pt: &[u8], ad: &[u8]) -> Result<Vec<u8>> {
         let mut ciphertext = Vec::with_capacity(pt.len());
 
-        let tag = chacha20_poly1305_aead::encrypt(
-            &self.secret_key,
-            &self.nonce,
-            &ad,
-            &pt,
-            &mut ciphertext,
-        )?;
+        let nonce = self.get_nonce();
 
-        self.inner_nonce += 1;
-        self.update();
+        let tag =
+            chacha20_poly1305_aead::encrypt(&self.secret_key, &nonce, &ad, &pt, &mut ciphertext)?;
 
-        if self.inner_nonce == ROTATION_INTERVAL {
+        self.counter += 1;
+
+        if self.counter == ROTATION_INTERVAL {
             self.rotate_key();
         }
 
@@ -72,9 +62,11 @@ impl CipherState {
     pub fn decrypt(&mut self, ct: &[u8], tag: &[u8], ad: &[u8]) -> bool {
         let mut plaintext = Vec::with_capacity(ct.len());
 
+        let nonce = self.get_nonce();
+
         let result = chacha20_poly1305_aead::decrypt(
             &self.secret_key,
-            &self.nonce,
+            &nonce,
             &ad,
             &tag,
             &ct,
@@ -83,10 +75,9 @@ impl CipherState {
 
         match result {
             Ok(_) => {
-                self.inner_nonce += 1;
-                self.update();
+                self.counter += 1;
 
-                if self.inner_nonce == ROTATION_INTERVAL {
+                if self.counter == ROTATION_INTERVAL {
                     self.rotate_key();
                 }
 
@@ -99,7 +90,6 @@ impl CipherState {
 
 #[cfg(test)]
 mod tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
     use hex;
 
