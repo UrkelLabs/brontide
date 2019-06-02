@@ -47,6 +47,7 @@ impl CipherState {
 
         let nonce = self.get_nonce();
 
+        //TODO implement chacha20 ourselves, and place heavy importances on benchmarking
         let tag =
             chacha20_poly1305_aead::encrypt(&self.secret_key, &nonce, &ad, &pt, &mut ciphertext)?;
 
@@ -109,6 +110,7 @@ mod tests {
         (CipherState::new(key, salt), key, salt)
     }
 
+    //TODO Intergrate random tests
     // fn cipher_state_setup_random() {
 
     // }
@@ -178,10 +180,66 @@ mod tests {
         let cipher_data = result.unwrap();
 
         assert_ne!(cipher_data, plain_text);
+
+        //Round 2
+
+        let result = cipher.encrypt(plain_text, associated_data);
+
+        assert!(result.is_ok());
+
+        let cipher_data2 = result.unwrap();
+
+        assert_ne!(cipher_data, plain_text);
+
+        //Ensure nonce rotates and data isn't the same.
+        assert_ne!(cipher_data, cipher_data2);
     }
 
-    //TODO add a test of key rotation after encrypting so manually make cipher.nonce ===
-    //ROTATION_INTERVAL - 1
+    #[test]
+    fn test_cipher_state_encrypt_key_rotate() {
+        let (mut cipher, key, salt) = cipher_state_setup();
+
+        let plain_text = b"hello, friends";
+
+        let associated_data = b"test123";
+
+        cipher.counter = 999;
+
+        let result = cipher.encrypt(plain_text, associated_data);
+
+        assert!(result.is_ok());
+
+        let cipher_data = result.unwrap();
+
+        assert_ne!(cipher_data, plain_text);
+
+        assert_ne!(cipher.secret_key, key);
+
+        assert_ne!(cipher.salt, salt);
+
+        assert_eq!(cipher.counter, 0);
+    }
+
+    //#[test]
+    //fn test_cipher_state_decrypt() {
+    //    //TODO put this in a test setup function.
+    //    //Or hardcode the encrypted stuff.
+    //    let (mut cipher, key, salt) = cipher_state_setup();
+
+    //    let plain_text = b"hello, friends";
+
+    //    let associated_data = b"test123";
+
+    //    cipher.counter = 999;
+
+    //    let result = cipher.encrypt(plain_text, associated_data);
+
+    //    assert!(result.is_ok());
+
+    //    let cipher_data = result.unwrap();
+    //}
+
+    //TODO test decrypt nonce rotation.
     //
     //TODO test panics as well, apparently there is a macro for this.
     //TODO fuzzing -> See rust bitcoin lib
