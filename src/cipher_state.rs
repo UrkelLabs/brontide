@@ -33,7 +33,7 @@ impl CipherState {
 
     pub fn rotate_key(&mut self) {
         let old = self.secret_key;
-        let (salt, next) = expand(old, self.salt);
+        let (salt, next) = expand(&old, &self.salt);
 
         self.salt.copy_from_slice(&salt);
         self.secret_key.copy_from_slice(&next);
@@ -42,6 +42,8 @@ impl CipherState {
     }
 
     //TODO this needs heavy testing.
+    //TODO test if the available size for cipher text makes a difference.
+    //Empty Vec vs Vec with capactiy TODO test tomorrow
     pub fn encrypt(&mut self, pt: &[u8], ad: &[u8]) -> Result<Vec<u8>> {
         let mut ciphertext = Vec::with_capacity(pt.len());
 
