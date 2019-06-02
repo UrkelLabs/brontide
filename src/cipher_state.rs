@@ -160,7 +160,7 @@ mod tests {
         assert_ne!(cipher.salt, salt);
 
         //Counter should be reset
-        assert_eq!(cipher.inner_nonce, 0);
+        assert_eq!(cipher.counter, 0);
     }
 
     #[test]
