@@ -1,7 +1,7 @@
 pub mod cipher_state;
 pub mod common;
 pub mod error;
-pub mod symmetric_state;
+// pub mod symmetric_state;
 pub mod util;
 
 pub type Result<T> = std::result::Result<T, error::Error>;

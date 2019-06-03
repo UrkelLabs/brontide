@@ -171,9 +171,9 @@ mod tests {
     fn test_cipher_state_encrypt() {
         let (mut cipher, key, salt) = cipher_state_setup();
 
-        let plain_text = b"hello, friends";
+        let plain_text = b"hello";
 
-        let associated_data = b"test123";
+        let associated_data = b"hello";
 
         let result = cipher.encrypt(plain_text, associated_data);
 
@@ -195,6 +195,23 @@ mod tests {
 
         //Ensure nonce rotates and data isn't the same.
         assert_ne!(cipher_data, cipher_data2);
+
+        //Test Cipher is deterministic
+        let (mut cipher, key, salt) = cipher_state_setup();
+
+        let plain_text = b"hello";
+
+        let associated_data = b"hello";
+
+        let result = cipher.encrypt(plain_text, associated_data);
+
+        assert!(result.is_ok());
+
+        let cipher_data2 = result.unwrap();
+
+        assert_ne!(cipher_data2, plain_text);
+
+        assert_eq!(cipher_data, cipher_data2);
     }
 
     #[test]
