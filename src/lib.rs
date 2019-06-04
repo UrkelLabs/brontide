@@ -1,6 +1,7 @@
 pub mod cipher_state;
 pub mod common;
 pub mod error;
+pub mod handshake;
 pub mod symmetric_state;
 pub mod util;
 

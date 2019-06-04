@@ -9,6 +9,7 @@ pub struct SymmetricState {
     digest: [u8; 32], // handshake digest
 }
 
+//TODO make these pub crate only
 impl SymmetricState {
     pub fn new(protocol_name: &str) -> Self {
         //Again rename this as empty. TODO
