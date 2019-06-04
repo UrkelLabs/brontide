@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 
 pub struct SymmetricState {
     cipher: CipherState,
-    chaining_key: [u8; 32],
+    pub(crate) chaining_key: [u8; 32],
     // temp: Buffer,   // temp key
     digest: [u8; 32], // handshake digest
 }

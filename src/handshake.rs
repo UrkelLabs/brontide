@@ -3,14 +3,15 @@ use crate::symmetric_state::SymmetricState;
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
+//TODO review pub exposure
 pub struct HandshakeState {
-    symmetric: SymmetricState,
-    initiator: bool,
+    pub(crate) symmetric: SymmetricState,
+    pub(crate) initiator: bool,
     //TODO again all these should be custom
-    local_static: [u8; 32],
-    local_ephemeral: [u8; 32],
-    remote_static: [u8; 32],
-    remote_ephemeral: [u8; 32],
+    pub(crate) local_static: [u8; 32],
+    pub(crate) local_ephemeral: [u8; 32],
+    pub(crate) remote_static: [u8; 32],
+    pub(crate) remote_ephemeral: [u8; 32],
 }
 
 impl HandshakeState {

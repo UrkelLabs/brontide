@@ -1,3 +1,4 @@
+pub mod brontide;
 pub mod cipher_state;
 pub mod common;
 pub mod error;
