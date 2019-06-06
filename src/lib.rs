@@ -1,3 +1,6 @@
+//TODO remove when 1.37 is released
+#![feature(async_await)]
+
 pub mod brontide;
 pub mod brontide_stream;
 pub mod cipher_state;
