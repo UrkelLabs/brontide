@@ -310,4 +310,8 @@ impl Brontide {
             ));
         }
     }
+
+    pub fn initiator(&self) -> bool {
+        self.handshake_state.initiator
+    }
 }
