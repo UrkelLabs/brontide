@@ -10,6 +10,7 @@ pub struct HandshakeState {
     //TODO again all these should be custom
     pub(crate) local_static: [u8; 32],
     pub(crate) local_ephemeral: [u8; 32],
+    //TODO both these need to be 33.
     pub(crate) remote_static: [u8; 32],
     pub(crate) remote_ephemeral: [u8; 32],
 }
@@ -27,6 +28,52 @@ impl HandshakeState {
         key
     }
 
+    pub(crate) fn new(
+        initiator: bool,
+        prologue: &str,
+        local_pub: [u8; 32],
+        remote_pub: Option<[u8; 32]>,
+    ) -> Self {
+        let remote_public_key: [u8; 32];
+
+        if let Some(remote_pub_ok) = remote_pub {
+            remote_public_key = remote_pub_ok
+        } else {
+            //Should be zero key not buffer new, TODO
+            remote_public_key = [0_u8; 32];
+        }
+
+        //Need constants here TODO
+        //ZERO_PUB
+        //ZERO_KEY
+
+        let state = HandshakeState {
+            initiator,
+            local_static: local_pub,
+            remote_static: remote_public_key,
+            symmetric: SymmetricState::new(PROTOCOL_NAME),
+            local_ephemeral: [0; 32],
+            remote_ephemeral: [0; 32],
+        };
+
+        if initiator {
+            state.symmetric.mix_digest(&state.remote_static, None);
+        } else {
+            let secp = Secp256k1::new();
+
+            let secret_key =
+                SecretKey::from_slice(&state.local_static).expect("32 bytes, within curve order");
+            let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+
+            state
+                .symmetric
+                .mix_digest(public_key.to_string().as_bytes(), None);
+        }
+
+        state
+    }
+
+    //TODO remove this.
     pub fn init_state(
         &mut self,
         initiator: bool,
