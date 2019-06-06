@@ -10,12 +10,23 @@ use secp256k1::PublicKey;
 //TODO let's review props in this struct
 pub struct Brontide {
     handshake_state: HandshakeState,
-    send_cipher: CipherState,
-    receive_cipher: CipherState,
+    //Not sure if going option is the way to go here, but for now it works
+    send_cipher: Option<CipherState>,
+    receive_cipher: Option<CipherState>,
 }
 
 impl Brontide {
+    //TODO I DON't think we need this here.
+    pub fn new(initiator: bool, local_pub: [u8; 32], remote_pub: Option<[u8; 32]>) -> Self {
+        Brontide {
+            handshake_state: HandshakeState::new(initiator, PROLOGUE, local_pub, remote_pub),
+            send_cipher: None,
+            receive_cipher: None,
+        }
+    }
+
     //TODO review if this is option or not.
+    //TODO remove this function - I think.
     pub fn init(&mut self, initiator: bool, local_pub: [u8; 32], remote_pub: Option<[u8; 32]>) {
         self.handshake_state
             .init_state(initiator, PROLOGUE, local_pub, remote_pub);
