@@ -8,7 +8,7 @@ use crate::Result;
 //TODO make keys their own types
 //TODO benchmarks
 
-pub(crate) struct CipherState {
+pub struct CipherState {
     secret_key: [u8; 32],
     salt: [u8; 32],
     //ChaCha20_poly1305 calls for a 96 bit nonce, with a 32 bit counter. Therefore we are only
@@ -17,7 +17,7 @@ pub(crate) struct CipherState {
 }
 
 impl CipherState {
-    pub(crate) fn new(key: [u8; 32], salt: [u8; 32]) -> Self {
+    pub fn new(key: [u8; 32], salt: [u8; 32]) -> Self {
         CipherState {
             secret_key: key,
             salt,
