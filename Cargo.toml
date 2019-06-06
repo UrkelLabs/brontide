@@ -12,6 +12,7 @@ hkdf = "0.7"
 sha2 = "0.8.0"
 secp256k1 = { version="0.13.0", features = ["rand"]}
 rand = "0.6.5"
+futures-preview = {version="=0.3.0-alpha.16", features = ["async-await", "nightly"]}
 
 
 
