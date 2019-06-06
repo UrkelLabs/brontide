@@ -47,7 +47,7 @@ impl HandshakeState {
         //ZERO_PUB
         //ZERO_KEY
 
-        let state = HandshakeState {
+        let mut state = HandshakeState {
             initiator,
             local_static: local_pub,
             remote_static: remote_public_key,
