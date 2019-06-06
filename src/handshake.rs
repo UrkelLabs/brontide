@@ -56,6 +56,7 @@ impl HandshakeState {
             remote_ephemeral: [0; 32],
         };
 
+        //TODO review this logic.
         if initiator {
             state.symmetric.mix_digest(&state.remote_static, None);
         } else {

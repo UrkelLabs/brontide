@@ -288,18 +288,26 @@ impl Brontide {
 
         if self.handshake_state.initiator {
             let send_key = h1;
-            self.send_cipher =
-                CipherState::new(send_key, self.handshake_state.symmetric.chaining_key);
+            self.send_cipher = Some(CipherState::new(
+                send_key,
+                self.handshake_state.symmetric.chaining_key,
+            ));
             let recv_key = h2;
-            self.receive_cipher =
-                CipherState::new(recv_key, self.handshake_state.symmetric.chaining_key);
+            self.receive_cipher = Some(CipherState::new(
+                recv_key,
+                self.handshake_state.symmetric.chaining_key,
+            ));
         } else {
             let recv_key = h1;
-            self.receive_cipher =
-                CipherState::new(recv_key, self.handshake_state.symmetric.chaining_key);
+            self.receive_cipher = Some(CipherState::new(
+                recv_key,
+                self.handshake_state.symmetric.chaining_key,
+            ));
             let send_key = h2;
-            self.send_cipher =
-                CipherState::new(send_key, self.handshake_state.symmetric.chaining_key);
+            self.send_cipher = Some(CipherState::new(
+                send_key,
+                self.handshake_state.symmetric.chaining_key,
+            ));
         }
     }
 }
