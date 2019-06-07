@@ -40,7 +40,7 @@ impl SymmetricState {
         //totally open to do. Once we finish the bulk of things come back to this.
         self.chaining_key = chain;
 
-        self.cipher = CipherState::new([0_u8; 32], temp_key);
+        self.cipher = CipherState::new(temp_key, [0_u8; 32]);
     }
 
     //TODO test if tag as an option handles this behavior correctly.
