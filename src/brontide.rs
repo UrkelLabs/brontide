@@ -267,16 +267,59 @@ impl Brontide {
     }
 
     //TODO write and read
-    //pub fn write(data: [u8; 32]) {
-    //    if data.len() <= 0xffff {
-    //        //throw error -> Not sure what yet though TODO
-    //    }
+    pub fn write(&mut self, data: Vec<u8>) -> Vec<u8> {
+        //if data.len() <= 0xffff {
+        //this is covered below in the u16 max
+        //    //throw error -> Not sure what yet though TODO
+        //}
 
-    //    //Needs to be a packet of length 2 + 16 + data.len() + 16
-    //    //TODO I think this is correct
-    //    let packet = Vec<u8>;
+        //Needs to be a packet of length 2 + 16 + data.len() + 16
+        //TODO I think this is correct
+        let mut packet = Vec::new();
 
-    //}
+        //Code smell
+        //TODO only supposed to copy the len if it were a u16
+        // packet.copy_from_slice(&data.len().to_be_bytes()[..1]);
+        let length = data.len();
+
+        if length > std::u16::MAX as usize {
+            //Throw error here.
+            //TODO
+        }
+
+        //TODO constants here are probably the way to go. - no magic numbers aka 2.
+        let length_buffer = [0; 2];
+
+        //Write the length
+        packet.append(&mut length_buffer.to_vec());
+
+        //TODO we should probably make ciphers as non-options since they need to hold state.
+        let mut tag = self
+            .send_cipher
+            .as_mut()
+            .unwrap()
+            //TODO catch error here, don't unwrap
+            .encrypt(&length.to_be_bytes(), &[])
+            .unwrap();
+
+        //Write the first tag
+        packet.append(&mut tag);
+
+        //Write the message
+        packet.append(&mut data.clone());
+
+        let mut tag = self
+            .send_cipher
+            .as_mut()
+            .unwrap()
+            .encrypt(&data, &[])
+            //Catch this error.
+            .unwrap();
+
+        packet.append(&mut tag);
+
+        packet
+    }
 
     //TODO review thoroughly AND TEST
     pub fn split(&mut self) {
