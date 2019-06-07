@@ -1,7 +1,7 @@
 use hex;
 use hkdf::Hkdf;
 use secp256k1::{ecdh::SharedSecret, PublicKey, Secp256k1, SecretKey};
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 use std::convert::TryInto;
 
 //TODO see if we need this to be a hardcoded array of 32, or if it can be variable.
@@ -36,6 +36,7 @@ pub(crate) fn get_public_key(private_key: [u8; 32]) -> [u8; 33] {
 }
 
 //TODO double check the shared secret is 32 bits
+//Return a Result TODO
 pub(crate) fn ecdh(public_key: [u8; 33], private_key: [u8; 32]) -> [u8; 32] {
     //TODO super ugly, let's clean this up with better error handling
     let secret = SharedSecret::new(
@@ -46,11 +47,9 @@ pub(crate) fn ecdh(public_key: [u8; 33], private_key: [u8; 32]) -> [u8; 32] {
     //TODO this is how we use the FFI library better, use this example for the rest of the code.
     let secret_vec = secret[..].to_vec();
 
-    let digest = Sha256::digest(&secret_vec);
-
     let mut return_digest = [0_u8; 32];
 
-    return_digest.copy_from_slice(digest.as_slice());
+    return_digest.copy_from_slice(secret_vec.as_slice());
 
     return_digest
 }
