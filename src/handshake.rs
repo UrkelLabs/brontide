@@ -14,21 +14,22 @@ pub struct HandshakeState {
     //TODO both these need to be 33.
     pub(crate) remote_static: [u8; 33],
     pub(crate) remote_ephemeral: [u8; 33],
+    pub generate_key: fn() -> [u8; 32],
 }
 
 impl HandshakeState {
-    pub fn generate_key() -> [u8; 32] {
-        let secp = Secp256k1::new();
-        let mut rng = OsRng::new().expect("OsRng");
-        let (secret_key, _) = secp.generate_keypair(&mut rng);
+    //pub fn generate_key() -> [u8; 32] {
+    //    let secp = Secp256k1::new();
+    //    let mut rng = OsRng::new().expect("OsRng");
+    //    let (secret_key, _) = secp.generate_keypair(&mut rng);
 
-        //TODO redo this.
-        let mut key = [0_u8; 32];
-        //TODO capture this unwrap and handle accordling
-        key.copy_from_slice(&hex::decode(secret_key.to_string()).unwrap());
+    //    //TODO redo this.
+    //    let mut key = [0_u8; 32];
+    //    //TODO capture this unwrap and handle accordling
+    //    key.copy_from_slice(&hex::decode(secret_key.to_string()).unwrap());
 
-        key
-    }
+    //    key
+    //}
 
     pub(crate) fn new(
         initiator: bool,
@@ -56,7 +57,21 @@ impl HandshakeState {
             symmetric: SymmetricState::new(PROTOCOL_NAME),
             local_ephemeral: [0; 32],
             remote_ephemeral: [0; 33],
+            generate_key: || {
+                let secp = Secp256k1::new();
+                let mut rng = OsRng::new().expect("OsRng");
+                let (secret_key, _) = secp.generate_keypair(&mut rng);
+
+                //TODO redo this.
+                let mut key = [0_u8; 32];
+                //TODO capture this unwrap and handle accordling
+                key.copy_from_slice(&hex::decode(secret_key.to_string()).unwrap());
+
+                key
+            },
         };
+
+        state.symmetric.mix_digest(prologue.as_bytes(), None);
 
         //TODO review this logic.
         if initiator {
