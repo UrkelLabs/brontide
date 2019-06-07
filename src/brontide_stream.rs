@@ -54,7 +54,7 @@ where
         let mut stream = BrontideStream {
             socket,
             state: ActState::None,
-            brontide: Brontide::new(true, local_secret, Some(remote_public)),
+            brontide: Brontide::new(true, local_secret, Some(remote_public), None),
         };
 
         stream.start().await?;
