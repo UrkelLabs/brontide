@@ -1,6 +1,6 @@
 use crate::brontide::Brontide;
-// use crate::Result;
-use futures::io::Error;
+use crate::Result;
+// use futures::io::Error;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use std::marker::Unpin;
 // #![feature(async_await)]
@@ -46,16 +46,44 @@ where
     //TODO check these names for local secret and remote public -> I think this hsould be local
     //public key NOT local secret
     //TODO returns a future, let's get the correct type.
-    pub fn connect(&mut self, socket: T, local_secret: [u8; 32], remote_public: [u8; 32]) {
+    pub async fn connect(
+        socket: T,
+        local_secret: [u8; 32],
+        remote_public: [u8; 32],
+    ) -> Result<Self> {
+        let mut stream = BrontideStream {
+            socket,
+            state: ActState::None,
+            brontide: Brontide::new(true, local_secret, Some(remote_public)),
+        };
+
+        stream.start().await?;
         //TODO check naming here
-        self.brontide = Brontide::new(true, local_secret, Some(remote_public));
+        // self.brontide = Brontide::new(true, local_secret, Some(remote_public));
 
         //Probably want to await this here. TODO
-        self.start(socket);
+        // self.start(socket).await;
+
+        //Either default, or act_one/two_size
+        //TODO self.socket most likely.
+        //TODO remove this unwrap, throw error.
+        //Make this a custom type TODO
+        let mut act_two = [0_u8; 50];
+        //TODO ?
+        stream.socket.read_exact(&mut act_two).await?;
+
+        stream.brontide.recv_act_two(act_two)?;
+
+        let act_three = stream.brontide.gen_act_three();
+
+        stream.socket.write_all(&act_three).await?;
+
+        Ok(stream)
     }
 
     //TODO we probably want this returning a future.
-    pub async fn start(&mut self, mut socket: T) -> Result<(), Error> {
+    //TODO this can just be wrapped into connect and accept -> no need for another function.
+    pub async fn start(&mut self) -> Result<()> {
         //TODO instead of doing this, I should expose this as a function
         if self.brontide.initiator() {
             self.state = ActState::Two;
@@ -63,7 +91,7 @@ where
             // self.waiting = Act_two_size;
             let act_one = self.brontide.gen_act_one();
             //TODO await this.
-            socket.write_all(&act_one).await?;
+            self.socket.write_all(&act_one).await?;
         //Catch the error either here, or above and destroy -> I"m thinking above.
         } else {
             self.state = ActState::One;
