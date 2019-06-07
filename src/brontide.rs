@@ -12,7 +12,8 @@ use secp256k1::PublicKey;
 
 //TODO let's review props in this struct
 pub struct Brontide {
-    handshake_state: HandshakeState,
+    //TODO this needs to be public *ONLY* to tests
+    pub handshake_state: HandshakeState,
     //Not sure if going option is the way to go here, but for now it works
     send_cipher: Option<CipherState>,
     receive_cipher: Option<CipherState>,
@@ -22,10 +23,27 @@ pub struct Brontide {
 impl Brontide {
     //TODO I DON't think we need this here.
     //TODO remove option if it's not used..
-    pub fn new(initiator: bool, local_pub: [u8; 32], remote_pub: Option<[u8; 33]>) -> Self {
+    pub fn new(
+        initiator: bool,
+        local_pub: [u8; 32],
+        remote_pub: Option<[u8; 33]>,
+        prologue: Option<&str>,
+    ) -> Self {
         //I think Prologue needs to be an option here actually.
+        let brontide_prologue: &str;
+        if prologue.is_some() {
+            brontide_prologue = prologue.unwrap();
+        } else {
+            brontide_prologue = PROLOGUE;
+        };
+
         Brontide {
-            handshake_state: HandshakeState::new(initiator, PROLOGUE, local_pub, remote_pub),
+            handshake_state: HandshakeState::new(
+                initiator,
+                brontide_prologue,
+                local_pub,
+                remote_pub,
+            ),
             send_cipher: None,
             receive_cipher: None,
         }
@@ -34,7 +52,7 @@ impl Brontide {
     //TODO replace with ACT_ONE Custom type.
     pub fn gen_act_one(&mut self) -> [u8; 50] {
         // e
-        self.handshake_state.local_ephemeral = HandshakeState::generate_key();
+        self.handshake_state.local_ephemeral = (self.handshake_state.generate_key)();
         let ephemeral = get_public_key(self.handshake_state.local_ephemeral);
         //TODO double check this.
         self.handshake_state.symmetric.mix_digest(&ephemeral, None);
@@ -114,7 +132,7 @@ impl Brontide {
     //TODO custom type return
     pub fn gen_act_two(&mut self) -> [u8; 50] {
         // e
-        self.handshake_state.local_ephemeral = HandshakeState::generate_key();
+        self.handshake_state.local_ephemeral = (self.handshake_state.generate_key)();
 
         let ephemeral = get_public_key(self.handshake_state.local_ephemeral);
 
