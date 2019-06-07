@@ -7,7 +7,10 @@ use crate::Result;
 //TODO more tests
 //TODO make keys their own types
 //TODO benchmarks
+//
+//TODO manually implement debug and print hex of the keys not bytes
 
+#[derive(Debug)]
 pub struct CipherState {
     secret_key: [u8; 32],
     salt: [u8; 32],
