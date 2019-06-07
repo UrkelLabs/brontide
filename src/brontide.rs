@@ -5,6 +5,9 @@ use crate::common::{PROLOGUE, VERSION};
 
 use crate::util::{ecdh, expand, get_public_key};
 
+use crate::error::Error;
+use crate::Result;
+
 use secp256k1::PublicKey;
 
 //TODO let's review props in this struct
@@ -15,21 +18,16 @@ pub struct Brontide {
     receive_cipher: Option<CipherState>,
 }
 
+//TODO need to implement errors in all of this.
 impl Brontide {
     //TODO I DON't think we need this here.
+    //TODO remove option if it's not used..
     pub fn new(initiator: bool, local_pub: [u8; 32], remote_pub: Option<[u8; 32]>) -> Self {
         Brontide {
             handshake_state: HandshakeState::new(initiator, PROLOGUE, local_pub, remote_pub),
             send_cipher: None,
             receive_cipher: None,
         }
-    }
-
-    //TODO review if this is option or not.
-    //TODO remove this function - I think.
-    pub fn init(&mut self, initiator: bool, local_pub: [u8; 32], remote_pub: Option<[u8; 32]>) {
-        self.handshake_state
-            .init_state(initiator, PROLOGUE, local_pub, remote_pub);
     }
 
     //TODO replace with ACT_ONE Custom type.
@@ -68,11 +66,9 @@ impl Brontide {
         act_one
     }
 
-    //This is going to have to return a Result type to catch errors, TODO
-    pub fn recv_act_one(&mut self, act_one: [u8; 50]) {
+    pub fn recv_act_one(&mut self, act_one: [u8; 50]) -> Result<()> {
         if act_one[0] != VERSION {
-            //throw error here TODO
-            println!("Act one: bad version.");
+            return Err(Error::Version("Act one: bad version.".to_owned()));
         }
 
         //TODO check these operations to ensure proper slicing //inclusive/exclusive etc.
@@ -88,8 +84,7 @@ impl Brontide {
         let result = PublicKey::from_slice(e);
 
         if !result.is_ok() {
-            //Throw error in here.
-            println!("act one: bad key");
+            return Err(Error::BadKey("Act one: bad key.".to_owned()));
         }
 
         //e
@@ -109,9 +104,10 @@ impl Brontide {
         //TODO must be empty buffer, not new buffer.
         //TODO code smell
         if !self.handshake_state.symmetric.decrypt_hash(&[], p) {
-            //throw error
-            println!("Act one: bad tag.");
+            return Err(Error::BadTag("Act one: bad tag".to_owned()));
         }
+
+        Ok(())
     }
 
     //TODO custom type return
@@ -146,10 +142,9 @@ impl Brontide {
         act_two
     }
 
-    pub fn recv_act_two(&mut self, act_two: [u8; 50]) {
+    pub fn recv_act_two(&mut self, act_two: [u8; 50]) -> Result<()> {
         if act_two[0] != VERSION {
-            //throw error here TODO
-            println!("Act two: bad version.");
+            return Err(Error::Version("Act two: bad version.".to_owned()));
         }
 
         //TODO check these operations to ensure proper slicing //inclusive/exclusive etc.
@@ -166,8 +161,7 @@ impl Brontide {
         let result = PublicKey::from_slice(e);
 
         if !result.is_ok() {
-            //Throw error in here.
-            println!("act one: bad key");
+            return Err(Error::BadKey("Act two: bad key.".to_owned()));
         }
 
         //e
@@ -187,9 +181,10 @@ impl Brontide {
         //TODO must be empty buffer, not new buffer.
         //TODO code smell
         if !self.handshake_state.symmetric.decrypt_hash(&[], p) {
-            //throw error
-            println!("Act two: bad tag.");
+            return Err(Error::BadTag("Act two: bad tag.".to_owned()));
         }
+
+        Ok(())
     }
 
     //TODO custom act three type
@@ -221,10 +216,11 @@ impl Brontide {
         act_three
     }
 
-    pub fn recv_act_three(&mut self, act_three: [u8; 66]) {
+    //Code smell on our errors here -> They are in different order than the above functions.
+    //TODO double check on that.
+    pub fn recv_act_three(&mut self, act_three: [u8; 66]) -> Result<()> {
         if act_three[0] != VERSION {
-            //Throw error in here
-            println!("Act three: bad version");
+            return Err(Error::Version("Act three: bad version.".to_owned()));
         }
 
         //TODO code smell here...
@@ -237,8 +233,7 @@ impl Brontide {
 
         // s
         if self.handshake_state.symmetric.decrypt_hash(s1, p1) {
-            //Throw error
-            println!("act three: bad tag");
+            return Err(Error::BadTag("Act three: bad tag.".to_owned()));
         }
 
         let remote_public = s1;
@@ -246,8 +241,7 @@ impl Brontide {
         let result = PublicKey::from_slice(&remote_public);
 
         if result.is_err() {
-            //Throw error here TODO
-            println!("act three: bad key.");
+            return Err(Error::BadKey("Act three: bad key.".to_owned()));
         }
 
         self.handshake_state
@@ -264,9 +258,12 @@ impl Brontide {
         if self.handshake_state.symmetric.decrypt_hash(s2, p2) {
             //Throw error, bad tag
             println!("act three bad tag");
+            return Err(Error::BadTag("Act three: bad tag.".to_owned()));
         }
 
         self.split();
+
+        Ok(())
     }
 
     //TODO write and read
