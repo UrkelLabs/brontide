@@ -74,8 +74,8 @@ impl CipherState {
             &self.secret_key,
             &nonce,
             &ad,
-            &tag,
             &ct,
+            &tag,
             &mut plaintext,
         );
 
