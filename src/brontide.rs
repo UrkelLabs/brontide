@@ -22,7 +22,8 @@ pub struct Brontide {
 impl Brontide {
     //TODO I DON't think we need this here.
     //TODO remove option if it's not used..
-    pub fn new(initiator: bool, local_pub: [u8; 32], remote_pub: Option<[u8; 32]>) -> Self {
+    pub fn new(initiator: bool, local_pub: [u8; 32], remote_pub: Option<[u8; 33]>) -> Self {
+        //I think Prologue needs to be an option here actually.
         Brontide {
             handshake_state: HandshakeState::new(initiator, PROLOGUE, local_pub, remote_pub),
             send_cipher: None,
@@ -57,7 +58,7 @@ impl Brontide {
         //Double check this operation TODO
         //Might have to splice from 1..ephemeral.len() + 1
         //Double check this TODO
-        act_one[1..33].copy_from_slice(&ephemeral);
+        act_one[1..34].copy_from_slice(&ephemeral);
 
         //Double check this operation TODO
         //Might have to splice from 1...tag.len() + 34

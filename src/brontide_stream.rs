@@ -49,7 +49,7 @@ where
     pub async fn connect(
         socket: T,
         local_secret: [u8; 32],
-        remote_public: [u8; 32],
+        remote_public: [u8; 33],
     ) -> Result<Self> {
         let mut stream = BrontideStream {
             socket,
@@ -81,8 +81,8 @@ where
         Ok(stream)
     }
 
-    //TODO we probably want this returning a future.
     //TODO this can just be wrapped into connect and accept -> no need for another function.
+    //TODO don't think this is publica
     pub async fn start(&mut self) -> Result<()> {
         //TODO instead of doing this, I should expose this as a function
         if self.brontide.initiator() {

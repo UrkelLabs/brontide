@@ -1,5 +1,6 @@
 use crate::common::PROTOCOL_NAME;
 use crate::symmetric_state::SymmetricState;
+use hex;
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
@@ -11,8 +12,8 @@ pub struct HandshakeState {
     pub(crate) local_static: [u8; 32],
     pub(crate) local_ephemeral: [u8; 32],
     //TODO both these need to be 33.
-    pub(crate) remote_static: [u8; 32],
-    pub(crate) remote_ephemeral: [u8; 32],
+    pub(crate) remote_static: [u8; 33],
+    pub(crate) remote_ephemeral: [u8; 33],
 }
 
 impl HandshakeState {
@@ -23,7 +24,8 @@ impl HandshakeState {
 
         //TODO redo this.
         let mut key = [0_u8; 32];
-        key.copy_from_slice(secret_key.to_string().as_bytes());
+        //TODO capture this unwrap and handle accordling
+        key.copy_from_slice(&hex::decode(secret_key.to_string()).unwrap());
 
         key
     }
@@ -32,15 +34,15 @@ impl HandshakeState {
         initiator: bool,
         prologue: &str,
         local_pub: [u8; 32],
-        remote_pub: Option<[u8; 32]>,
+        remote_pub: Option<[u8; 33]>,
     ) -> Self {
-        let remote_public_key: [u8; 32];
+        let remote_public_key: [u8; 33];
 
         if let Some(remote_pub_ok) = remote_pub {
             remote_public_key = remote_pub_ok
         } else {
             //Should be zero key not buffer new, TODO
-            remote_public_key = [0_u8; 32];
+            remote_public_key = [0_u8; 33];
         }
 
         //Need constants here TODO
@@ -53,7 +55,7 @@ impl HandshakeState {
             remote_static: remote_public_key,
             symmetric: SymmetricState::new(PROTOCOL_NAME),
             local_ephemeral: [0; 32],
-            remote_ephemeral: [0; 32],
+            remote_ephemeral: [0; 33],
         };
 
         //TODO review this logic.
@@ -80,9 +82,9 @@ impl HandshakeState {
         initiator: bool,
         prologue: &str,
         local_pub: [u8; 32],
-        remote_pub: Option<[u8; 32]>,
+        remote_pub: Option<[u8; 33]>,
     ) {
-        let remote_public_key: [u8; 32];
+        let remote_public_key: [u8; 33];
         self.initiator = initiator;
         //TODO might not have to do this.
         self.local_static.copy_from_slice(&local_pub);
@@ -90,7 +92,7 @@ impl HandshakeState {
             remote_public_key = remote_pub_ok
         } else {
             //Should be zero key not buffer new, TODO
-            remote_public_key = [0_u8; 32];
+            remote_public_key = [0_u8; 33];
         }
 
         self.remote_static = remote_public_key;

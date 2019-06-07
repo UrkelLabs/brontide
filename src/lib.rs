@@ -10,6 +10,9 @@ pub mod handshake;
 pub mod symmetric_state;
 pub mod util;
 
+pub use crate::brontide::Brontide;
+pub use crate::brontide_stream::BrontideStream;
+
 pub type Result<T> = std::result::Result<T, error::Error>;
 
 //TODO benchmark Cipher
