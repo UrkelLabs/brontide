@@ -47,14 +47,13 @@ impl CipherState {
     //TODO this needs heavy testing.
     //TODO test if the available size for cipher text makes a difference.
     //Empty Vec vs Vec with capactiy TODO test tomorrow
-    pub fn encrypt(&mut self, pt: &[u8], ad: &[u8]) -> Result<Vec<u8>> {
-        let mut ciphertext = Vec::with_capacity(pt.len());
+    pub fn encrypt(&mut self, pt: &[u8], ad: &[u8], ct: &mut Vec<u8>) -> Result<Vec<u8>> {
+        // let mut ciphertext = Vec::with_capacity(pt.len());
 
         let nonce = self.get_nonce();
 
         //TODO implement chacha20 ourselves, and place heavy importances on benchmarking
-        let tag =
-            chacha20_poly1305_aead::encrypt(&self.secret_key, &nonce, &ad, &pt, &mut ciphertext)?;
+        let tag = chacha20_poly1305_aead::encrypt(&self.secret_key, &nonce, &ad, &pt, ct)?;
 
         self.counter += 1;
 
@@ -178,7 +177,9 @@ mod tests {
 
         let associated_data = b"hello";
 
-        let result = cipher.encrypt(plain_text, associated_data);
+        let mut cipher_text = Vec::with_capacity(plain_text.len());
+
+        let result = cipher.encrypt(plain_text, associated_data, &mut cipher_text);
 
         assert!(result.is_ok());
 
@@ -188,7 +189,9 @@ mod tests {
 
         //Round 2
 
-        let result = cipher.encrypt(plain_text, associated_data);
+        let mut cipher_text = Vec::with_capacity(plain_text.len());
+
+        let result = cipher.encrypt(plain_text, associated_data, cipher_text.as_mut());
 
         assert!(result.is_ok());
 
@@ -206,7 +209,9 @@ mod tests {
 
         let associated_data = b"hello";
 
-        let result = cipher.encrypt(plain_text, associated_data);
+        let mut cipher_text = Vec::with_capacity(plain_text.len());
+
+        let result = cipher.encrypt(plain_text, associated_data, &mut cipher_text);
 
         assert!(result.is_ok());
 
@@ -227,7 +232,9 @@ mod tests {
 
         cipher.counter = 999;
 
-        let result = cipher.encrypt(plain_text, associated_data);
+        let mut cipher_text = Vec::with_capacity(plain_text.len());
+
+        let result = cipher.encrypt(plain_text, associated_data, &mut cipher_text);
 
         assert!(result.is_ok());
 
