@@ -2,6 +2,8 @@ use crate::cipher_state::CipherState;
 use crate::util::expand;
 use sha2::{Digest, Sha256};
 
+//TODO manually impl this.
+#[derive(Debug)]
 pub struct SymmetricState {
     cipher: CipherState,
     pub(crate) chaining_key: [u8; 32],
@@ -71,11 +73,14 @@ impl SymmetricState {
     //pt = plaintext, let's make that more verbose TODO so the code is more readable.
     //
     ////TODO should return custom tag type.
-    pub fn encrypt_hash(&mut self, plain_text: &[u8]) -> [u8; 16] {
+    pub fn encrypt_hash(&mut self, plain_text: &[u8], cipher_text: &mut Vec<u8>) -> [u8; 16] {
         //TODO remove this, and have this function return a result
-        let tag = self.cipher.encrypt(plain_text, &self.digest).unwrap();
+        let tag = self
+            .cipher
+            .encrypt(plain_text, &self.digest, cipher_text)
+            .unwrap();
 
-        self.mix_digest(plain_text, Some(&tag));
+        self.mix_digest(cipher_text, Some(&tag));
 
         let mut return_tag = [0_u8; 16];
 
