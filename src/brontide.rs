@@ -67,7 +67,11 @@ impl Brontide {
         //TODO needs to be an empty buffer of 32 bytes. - Make this a constant when moved to new
         //package
         //TODO decide whether this is 32 0s, or empty.
-        let tag = self.handshake_state.symmetric.encrypt_hash(&[]);
+        let mut cipher_text = Vec::with_capacity(0);
+        let tag = self
+            .handshake_state
+            .symmetric
+            .encrypt_hash(&[], &mut cipher_text);
 
         //const ACT_ONE_SIZE = 50;
         // let act_one = Buffer::new();
@@ -147,7 +151,11 @@ impl Brontide {
 
         //TODO again this needs to be empty buffer, NOT new buffer.
         //TODO empty or 0s?
-        let tag = self.handshake_state.symmetric.encrypt_hash(&[]);
+        let mut cipher_text = Vec::with_capacity(0);
+        let tag = self
+            .handshake_state
+            .symmetric
+            .encrypt_hash(&[], &mut cipher_text);
 
         // const ACT_TWO_SIZE = 50;
         let mut act_two = [0_u8; 50];
@@ -209,25 +217,35 @@ impl Brontide {
     //TODO custom act three type
     pub fn gen_act_three(&mut self) -> [u8; 66] {
         let our_pub_key = get_public_key(self.handshake_state.local_static);
-        let tag_1 = self.handshake_state.symmetric.encrypt_hash(&our_pub_key);
-        let ct = our_pub_key;
+        //We need to pass cipher text into here, since we don't encrypt in memory.
+        //TODO double check sizing on here.
+        let mut ct = Vec::with_capacity(33);
+        let tag_1 = self
+            .handshake_state
+            .symmetric
+            .encrypt_hash(&our_pub_key, &mut ct);
+        // let ct = our_pub_key;
 
         let s = ecdh(
             self.handshake_state.remote_ephemeral,
             self.handshake_state.local_static,
         );
+
         self.handshake_state.symmetric.mix_key(&s);
 
-        //TODO again must be [u8; 32] empty not new.
-        let tag_2 = self.handshake_state.symmetric.encrypt_hash(&[]);
+        let mut cipher_text = Vec::with_capacity(0);
+        let tag_2 = self
+            .handshake_state
+            .symmetric
+            .encrypt_hash(&[], &mut cipher_text);
 
         //const ACT_THREE_SIZE = 66;
         let mut act_three = [0_u8; 66];
         act_three[0] = VERSION;
 
         //TODO code smell
-        act_three[1..33].copy_from_slice(&ct);
-        act_three[34..49].copy_from_slice(&tag_1);
+        act_three[1..34].copy_from_slice(&ct);
+        act_three[34..50].copy_from_slice(&tag_1);
         act_three[50..].copy_from_slice(&tag_2);
 
         self.split();
@@ -312,13 +330,15 @@ impl Brontide {
         //Write the length
         packet.append(&mut length_buffer.to_vec());
 
+        //TODO not sure this is the correct capacity.
+        let mut cipher_text = Vec::with_capacity(2);
         //TODO we should probably make ciphers as non-options since they need to hold state.
         let mut tag = self
             .send_cipher
             .as_mut()
             .unwrap()
             //TODO catch error here, don't unwrap
-            .encrypt(&length.to_be_bytes(), &[])
+            .encrypt(&length.to_be_bytes(), &[], &mut cipher_text)
             .unwrap();
 
         //Write the first tag
@@ -327,11 +347,12 @@ impl Brontide {
         //Write the message
         packet.append(&mut data.clone());
 
+        let mut cipher_text = Vec::with_capacity(length);
         let mut tag = self
             .send_cipher
             .as_mut()
             .unwrap()
-            .encrypt(&data, &[])
+            .encrypt(&data, &[], &mut cipher_text)
             //Catch this error.
             .unwrap();
 
