@@ -85,7 +85,6 @@ fn test_responder_successful_handshake() {
 
     let result = responder.recv_act_three(act_three);
 
-    dbg!(&result);
     assert!(result.is_ok());
 
     // assert_eq!(hex::encode(responder.recv_cipher.secret_key), "969ab31b4d288cedf6218839b27a3e2140827047f2c0f01bf5c04435d43511a9");
