@@ -323,7 +323,7 @@ impl Brontide {
         Ok(())
     }
 
-    //TODO write and read
+    //TODO read
     pub fn write(&mut self, data: Vec<u8>) -> Vec<u8> {
         //if data.len() <= 0xffff {
         //this is covered below in the u16 max
@@ -344,11 +344,14 @@ impl Brontide {
             //TODO
         }
 
+        let length_shortened = length as u16;
+
         //TODO constants here are probably the way to go. - no magic numbers aka 2.
-        let length_buffer = [0; 2];
+        let mut length_buffer = [0; 2];
+        length_buffer.copy_from_slice(&length_shortened.to_be_bytes());
 
         //Write the length
-        packet.append(&mut length_buffer.to_vec());
+        // packet.append(&mut length_buffer.to_vec());
 
         //TODO not sure this is the correct capacity.
         let mut cipher_text = Vec::with_capacity(2);
@@ -358,14 +361,17 @@ impl Brontide {
             .as_mut()
             .unwrap()
             //TODO catch error here, don't unwrap
-            .encrypt(&length.to_be_bytes(), &[], &mut cipher_text)
+            // .encrypt(&length.to_be_bytes(), &[], &mut cipher_text)
+            .encrypt(&length_buffer, &[], &mut cipher_text)
             .unwrap();
+
+        packet.append(&mut cipher_text);
 
         //Write the first tag
         packet.append(&mut tag);
 
         //Write the message
-        packet.append(&mut data.clone());
+        // packet.append(&mut data.clone());
 
         let mut cipher_text = Vec::with_capacity(length);
         let mut tag = self
@@ -375,6 +381,8 @@ impl Brontide {
             .encrypt(&data, &[], &mut cipher_text)
             //Catch this error.
             .unwrap();
+
+        packet.append(&mut cipher_text);
 
         packet.append(&mut tag);
 
