@@ -389,7 +389,55 @@ impl Brontide {
         packet
     }
 
+    //TODO return result
+    pub fn read(&mut self, packet: &[u8]) -> Vec<u8> {
+        let len = &packet[..2];
+        let tag1 = &packet[2..18];
+
+        let mut plain_text = Vec::with_capacity(2);
+        //TODO rewrite this.
+        let result =
+            self.receive_cipher
+                .as_mut()
+                .unwrap()
+                .decrypt(&len, &tag1, &[], &mut plain_text);
+
+        let mut length: u16 = 0;
+        let mut length_bytes = [0; 2];
+
+        if result {
+            length_bytes.copy_from_slice(&plain_text);
+            length = u16::from_be_bytes(length_bytes);
+        } else {
+            //throw error
+        };
+
+        let mut message = Vec::with_capacity(length as usize);
+
+        if packet.len() != 16 + length as usize + 18 {
+            //Throw error
+            println!("bad size");
+            dbg!(packet.len());
+            dbg!(16 + length + 18);
+        };
+
+        let encrypted_message = &packet[18..18 + length as usize];
+        let tag2 = &packet[18 + length as usize..];
+
+        if !self.receive_cipher.as_mut().unwrap().decrypt(
+            encrypted_message,
+            tag2,
+            &[],
+            &mut message,
+        ) {
+            //Throw error in here.
+        };
+
+        message
+    }
+
     //TODO review thoroughly AND TEST
+    //TODO I don't think this should be public
     pub fn split(&mut self) {
         //TODO must be buffer empty not new
         let (h1, h2) = expand(&[], &self.handshake_state.symmetric.chaining_key);
@@ -422,4 +470,6 @@ impl Brontide {
     pub fn initiator(&self) -> bool {
         self.handshake_state.initiator
     }
+
+    //TODO expose send and receive cipher secret keys.
 }
