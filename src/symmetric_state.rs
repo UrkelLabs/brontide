@@ -91,8 +91,15 @@ impl SymmetricState {
 
     //ct == CipherText, make this more verbose as above TODO
     //TODO, make this it's own type - tag - as MAC.
-    pub fn decrypt_hash(&mut self, cipher_text: &[u8], tag: [u8; 16]) -> bool {
-        let result = self.cipher.decrypt(cipher_text, &tag, &self.digest);
+    pub fn decrypt_hash(
+        &mut self,
+        cipher_text: &[u8],
+        tag: [u8; 16],
+        plain_text: &mut Vec<u8>,
+    ) -> bool {
+        let result = self
+            .cipher
+            .decrypt(cipher_text, &tag, &self.digest, plain_text);
 
         if result {
             //TODO this is different than in HSD, test that this works (Calling mix_digest *after*
