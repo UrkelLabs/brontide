@@ -125,9 +125,14 @@ impl Brontide {
         );
         self.handshake_state.symmetric.mix_key(&s);
 
+        let mut plain_text = Vec::with_capacity(0);
         //TODO must be empty buffer, not new buffer.
         //TODO code smell
-        if !self.handshake_state.symmetric.decrypt_hash(&[], p) {
+        if !self
+            .handshake_state
+            .symmetric
+            .decrypt_hash(&[], p, &mut plain_text)
+        {
             return Err(Error::BadTag("Act one: bad tag".to_owned()));
         }
 
@@ -207,9 +212,14 @@ impl Brontide {
         );
         self.handshake_state.symmetric.mix_key(&s);
 
+        let mut plain_text = Vec::with_capacity(0);
         //TODO must be empty buffer, not new buffer.
         //TODO code smell
-        if !self.handshake_state.symmetric.decrypt_hash(&[], p) {
+        if !self
+            .handshake_state
+            .symmetric
+            .decrypt_hash(&[], p, &mut plain_text)
+        {
             return Err(Error::BadTag("Act two: bad tag.".to_owned()));
         }
 
@@ -266,16 +276,21 @@ impl Brontide {
         let s1 = &act_three[1..34];
         let mut p1 = [0; 16];
         p1.copy_from_slice(&act_three[34..50]);
-        let s2 = &act_three[50..50];
+        // let s2 = &act_three[50..50];
         let mut p2 = [0; 16];
-        p2.copy_from_slice(&act_three[50..66]);
+        p2.copy_from_slice(&act_three[50..]);
 
+        let mut plain_text = Vec::with_capacity(s1.len());
         // s
-        if self.handshake_state.symmetric.decrypt_hash(s1, p1) {
+        if !self
+            .handshake_state
+            .symmetric
+            .decrypt_hash(s1, p1, &mut plain_text)
+        {
             return Err(Error::BadTag("Act three: bad tag.".to_owned()));
         }
 
-        let remote_public = s1;
+        let remote_public = plain_text;
 
         let result = PublicKey::from_slice(&remote_public);
 
@@ -285,7 +300,7 @@ impl Brontide {
 
         self.handshake_state
             .remote_static
-            .copy_from_slice(remote_public);
+            .copy_from_slice(&remote_public);
 
         // se
         let se = ecdh(
@@ -294,9 +309,12 @@ impl Brontide {
         );
         self.handshake_state.symmetric.mix_key(&se);
 
-        if self.handshake_state.symmetric.decrypt_hash(s2, p2) {
-            //Throw error, bad tag
-            println!("act three bad tag");
+        let mut plain_text = Vec::with_capacity(0);
+        if !self
+            .handshake_state
+            .symmetric
+            .decrypt_hash(&[], p2, &mut plain_text)
+        {
             return Err(Error::BadTag("Act three: bad tag.".to_owned()));
         }
 
