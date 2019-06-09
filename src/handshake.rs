@@ -85,7 +85,7 @@ impl HandshakeState {
 
             state
                 .symmetric
-                .mix_digest(public_key.to_string().as_bytes(), None);
+                .mix_digest(&hex::decode(public_key.to_string()).unwrap(), None);
         }
 
         state
