@@ -97,7 +97,8 @@ impl Brontide {
         //TODO check these operations to ensure proper slicing //inclusive/exclusive etc.
         //TODO also check on the borrowing here, doesn't smell right.
         //I think this is to 33 - double check
-        let e = &act_one[1..33];
+        //TODO change this to be what I did for recv act two
+        let e = &act_one[1..34];
         //TODO custom type.
         let mut p = [0; 16];
         p.copy_from_slice(&act_one[34..act_one.len()]);
@@ -163,7 +164,7 @@ impl Brontide {
 
         //TODO all the issues from act one apply here as well, this code needs to be thoroughly
         //checked and tested.
-        act_two[1..33].copy_from_slice(&ephemeral);
+        act_two[1..34].copy_from_slice(&ephemeral);
         act_two[34..].copy_from_slice(&tag);
 
         act_two
@@ -176,7 +177,8 @@ impl Brontide {
 
         //TODO check these operations to ensure proper slicing //inclusive/exclusive etc.
         //TODO also check on the borrowing here, doesn't smell right.
-        let e = &act_two[1..34];
+        let mut e = [0; 33];
+        e.copy_from_slice(&act_two[1..34]);
 
         //TODO
         let mut p = [0; 16];
@@ -185,7 +187,7 @@ impl Brontide {
 
         //We just want to verify here, might be an easier way than creating the actual key.
         //TODO
-        let result = PublicKey::from_slice(e);
+        let result = PublicKey::from_slice(&e);
 
         if !result.is_ok() {
             return Err(Error::BadKey("Act two: bad key.".to_owned()));
@@ -193,7 +195,7 @@ impl Brontide {
 
         //e
         //TODO code smell
-        self.handshake_state.remote_ephemeral.copy_from_slice(e);
+        self.handshake_state.remote_ephemeral.copy_from_slice(&e);
         self.handshake_state
             .symmetric
             .mix_digest(&self.handshake_state.remote_ephemeral, None);
