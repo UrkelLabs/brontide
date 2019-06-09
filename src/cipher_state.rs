@@ -64,19 +64,12 @@ impl CipherState {
         Ok(tag.to_vec())
     }
 
-    pub fn decrypt(&mut self, ct: &[u8], tag: &[u8], ad: &[u8]) -> bool {
-        let mut plaintext = Vec::with_capacity(ct.len());
+    pub fn decrypt(&mut self, ct: &[u8], tag: &[u8], ad: &[u8], pt: &mut Vec<u8>) -> bool {
+        // let mut plaintext = Vec::with_capacity(ct.len());
 
         let nonce = self.get_nonce();
 
-        let result = chacha20_poly1305_aead::decrypt(
-            &self.secret_key,
-            &nonce,
-            &ad,
-            &ct,
-            &tag,
-            &mut plaintext,
-        );
+        let result = chacha20_poly1305_aead::decrypt(&self.secret_key, &nonce, &ad, &ct, &tag, pt);
 
         match result {
             Ok(_) => {
