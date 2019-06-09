@@ -91,3 +91,83 @@ fn test_responder_successful_handshake() {
 
     // assert_eq!(hex::encode(responder.send_cipher.secret_key), "bb9020b8965f4df047e07f955f3c4b88418984aadc5cdb35096b9ea8fa5c3442");
 }
+
+//TODO move this in another file, or above these functions -> Setup for the below encryption.
+fn initiator_setup() -> brontide::Brontide {
+    let mut rs_pub = [0_u8; 33];
+    rs_pub.copy_from_slice(
+        &hex::decode("028d7500dd4c12685d1f568b4c2b5048e8534b873319f3a8daa612b469132ec7f7").unwrap(),
+    );
+
+    let mut ls_priv = [0_u8; 32];
+    ls_priv.copy_from_slice(
+        &hex::decode("1111111111111111111111111111111111111111111111111111111111111111").unwrap(),
+    );
+
+    let mut initiator = brontide::Brontide::new(true, ls_priv, Some(rs_pub), Some(PROLOGUE));
+
+    initiator.handshake_state.generate_key = || {
+        let mut e_priv = [0_u8; 32];
+        e_priv.copy_from_slice(
+            &hex::decode("1212121212121212121212121212121212121212121212121212121212121212")
+                .unwrap(),
+        );
+        e_priv
+    };
+
+    let act_one = initiator.gen_act_one();
+
+    let mut act_two = [0_u8; 50];
+    act_two.copy_from_slice(&hex::decode("0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730ae").unwrap());
+
+    let result = initiator.recv_act_two(act_two);
+
+    let act_three = initiator.gen_act_three();
+
+    initiator
+}
+
+#[test]
+fn test_encryption_and_key_rotation() {
+    let mut initiator = initiator_setup();
+
+    let HELLO = b"hello";
+
+    for x in 0..1001 {
+        let packet = initiator.write(HELLO.to_vec());
+
+        match x {
+            0 => assert_eq!(
+                hex::encode(packet),
+                "cf2b30ddf0cf3f80e7c35a6e6730b59fe802473180f396d88a8fb0db8cbcf25d2f214cf9ea1d95"
+            ),
+            1 => assert_eq!(
+                hex::encode(packet),
+                "72887022101f0b6753e0c7de21657d35a4cb2a1f5cde2650528bbc8f837d0f0d7ad833b1a256a1"
+            ),
+            500 => assert_eq!(
+                hex::encode(packet),
+                "178cb9d7387190fa34db9c2d50027d21793c9bc2d40b1e14dcf30ebeeeb220f48364f7a4c68bf8"
+            ),
+            501 => assert_eq!(
+                hex::encode(packet),
+                "1b186c57d44eb6de4c057c49940d79bb838a145cb528d6e8fd26dbe50a60ca2c104b56b60e45bd"
+            ),
+            1000 => assert_eq!(
+                hex::encode(packet),
+                "4a2f3cc3b5e78ddb83dcb426d9863d9d9a723b0337c89dd0b005d89f8d3c05c52b76b29b740f09"
+            ),
+            1001 => assert_eq!(
+                hex::encode(packet),
+                "2ecd8c8a5629d0d02ab457a0fdd0f7b90a192cd46be5ecb6ca570bfc5e268338b1a16cf4ef2d36"
+            ),
+            _ => {}
+        }
+    }
+}
+
+//       const msg = responder.read(packet);
+
+//       assert.strictEqual(msg.toString('hex'), HELLO.toString('hex'));
+//     }
+//   });
