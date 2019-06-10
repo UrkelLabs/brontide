@@ -10,7 +10,7 @@ use std::fmt;
 //TODO more tests
 //TODO benchmarks
 
-pub struct CipherState {
+pub(crate) struct CipherState {
     secret_key: SecretKey,
     //TODO I think we should make salt a type as well.
     salt: [u8; 32],
@@ -77,8 +77,11 @@ impl CipherState {
         self.secret_key
     }
 
-    // #[cfg(test)]
-    // pub fn salt(&self) ->
+    //TODO custom type here.
+    #[cfg(test)]
+    pub fn salt(&self) -> [u8; 32] {
+        self.salt
+    }
 }
 
 impl fmt::Debug for CipherState {
