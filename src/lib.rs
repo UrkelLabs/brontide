@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "stream", feature(async_await))]
+
 pub mod brontide;
 #[cfg(feature = "stream")]
 pub mod brontide_stream;

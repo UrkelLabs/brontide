@@ -1,5 +1,6 @@
 //TODO remove when 1.37 is released
-#![feature(async_await)]
+// #![feature(async_await)]
+// #![cfg_attr(feature = "stream", feature(async_await))]
 
 use crate::brontide::Brontide;
 use crate::Result;

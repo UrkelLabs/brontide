@@ -7,7 +7,7 @@ license = "MIT"
 edition = "2018"
 
 [features]
-stream = []
+stream = ["futures-preview"]
 
 [dependencies]
 chacha20-poly1305-aead = "0.1.2"
