@@ -1,7 +1,5 @@
-//TODO remove when 1.37 is released
-#![feature(async_await)]
-
 pub mod brontide;
+#[cfg(feature = "stream")]
 pub mod brontide_stream;
 pub mod cipher_state;
 pub mod common;
@@ -11,6 +9,8 @@ pub mod symmetric_state;
 pub mod util;
 
 pub use crate::brontide::Brontide;
+
+#[cfg(feature = "stream")]
 pub use crate::brontide_stream::BrontideStream;
 
 pub type Result<T> = std::result::Result<T, error::Error>;

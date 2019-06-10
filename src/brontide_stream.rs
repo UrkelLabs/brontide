@@ -1,3 +1,6 @@
+//TODO remove when 1.37 is released
+#![feature(async_await)]
+
 use crate::brontide::Brontide;
 use crate::Result;
 // use futures::io::Error;

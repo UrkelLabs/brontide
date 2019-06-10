@@ -471,5 +471,8 @@ impl Brontide {
         self.handshake_state.initiator
     }
 
+    // #[cfg(test)]
+    // pub fn for receive and send cipher
+
     //TODO expose send and receive cipher secret keys.
 }
