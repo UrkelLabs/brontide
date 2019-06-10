@@ -11,6 +11,7 @@ This implementation is based on Brontide from HSD as well as Noise from LND.
 
 # Usage
 
-Currently Rust-Brontide requires the nightly version of rust to compile. This crate makes heavy usage
-of futures 0.3 as well as the new async/await syntax. These will be stable in 1.37 which should be released early August,
+A majority of Rust-Brontide is available on stable Rust. When compiling on stable, we export the main Brontide struct.
+In order for ease of use, we have also included a Brontide Stream structure that handles incoming and outgoing sockets. This 
+feature requires nightly as it makes heavy use of async/await and futures. These will be stable in 1.37 which should be released early August,
 at which point we will remove the nightly requirement.
