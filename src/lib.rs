@@ -1,5 +1,6 @@
 #![cfg_attr(feature = "stream", feature(async_await))]
 
+//TODO check which should be public
 pub mod brontide;
 #[cfg(feature = "stream")]
 pub mod brontide_stream;
@@ -8,6 +9,7 @@ pub mod common;
 pub mod error;
 pub mod handshake;
 pub mod symmetric_state;
+pub mod types;
 pub mod util;
 
 pub use crate::brontide::Brontide;

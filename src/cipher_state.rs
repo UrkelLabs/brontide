@@ -4,15 +4,15 @@ use crate::common::ROTATION_INTERVAL;
 use crate::util::expand;
 use crate::Result;
 
-//TODO more tests
-//TODO make keys their own types
-//TODO benchmarks
-//
-//TODO manually implement debug and print hex of the keys not bytes
+use crate::types::{Nonce, SecretKey};
+use std::fmt;
 
-#[derive(Debug)]
+//TODO more tests
+//TODO benchmarks
+
 pub struct CipherState {
-    secret_key: [u8; 32],
+    secret_key: SecretKey,
+    //TODO I think we should make salt a type as well.
     salt: [u8; 32],
     //ChaCha20_poly1305 calls for a 96 bit nonce, with a 32 bit counter. Therefore we are only
     //going to use u32 as our counter as opposed to u64.
@@ -20,7 +20,7 @@ pub struct CipherState {
 }
 
 impl CipherState {
-    pub fn new(key: [u8; 32], salt: [u8; 32]) -> Self {
+    pub(crate) fn new(key: SecretKey, salt: [u8; 32]) -> Self {
         CipherState {
             secret_key: key,
             salt,
@@ -28,29 +28,18 @@ impl CipherState {
         }
     }
 
-    fn get_nonce(&self) -> [u8; 12] {
-        let mut nonce = [0_u8; 12];
-        nonce[4..8].copy_from_slice(&self.counter.to_le_bytes());
-        nonce
-    }
-
-    pub fn rotate_key(&mut self) {
+    fn rotate_key(&mut self) {
         let old = self.secret_key;
         let (salt, next) = expand(&old, &self.salt);
 
         self.salt.copy_from_slice(&salt);
-        self.secret_key.copy_from_slice(&next);
+        self.secret_key = SecretKey::from(next);
 
         self.counter = 0;
     }
 
-    //TODO this needs heavy testing.
-    //TODO test if the available size for cipher text makes a difference.
-    //Empty Vec vs Vec with capactiy TODO test tomorrow
-    pub fn encrypt(&mut self, pt: &[u8], ad: &[u8], ct: &mut Vec<u8>) -> Result<Vec<u8>> {
-        // let mut ciphertext = Vec::with_capacity(pt.len());
-
-        let nonce = self.get_nonce();
+    pub(crate) fn encrypt(&mut self, pt: &[u8], ad: &[u8], ct: &mut Vec<u8>) -> Result<Vec<u8>> {
+        let nonce = Nonce::from_counter(self.counter);
 
         //TODO implement chacha20 ourselves, and place heavy importances on benchmarking
         let tag = chacha20_poly1305_aead::encrypt(&self.secret_key, &nonce, &ad, &pt, ct)?;
@@ -64,10 +53,8 @@ impl CipherState {
         Ok(tag.to_vec())
     }
 
-    pub fn decrypt(&mut self, ct: &[u8], tag: &[u8], ad: &[u8], pt: &mut Vec<u8>) -> bool {
-        // let mut plaintext = Vec::with_capacity(ct.len());
-
-        let nonce = self.get_nonce();
+    pub(crate) fn decrypt(&mut self, ct: &[u8], tag: &[u8], ad: &[u8], pt: &mut Vec<u8>) -> bool {
+        let nonce = Nonce::from_counter(self.counter);
 
         let result = chacha20_poly1305_aead::decrypt(&self.secret_key, &nonce, &ad, &ct, &tag, pt);
 
@@ -83,6 +70,24 @@ impl CipherState {
             }
             Err(_) => false,
         }
+    }
+
+    #[cfg(test)]
+    pub fn secret_key(&self) -> SecretKey {
+        self.secret_key
+    }
+
+    // #[cfg(test)]
+    // pub fn salt(&self) ->
+}
+
+impl fmt::Debug for CipherState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CipherState")
+            .field("secret_key", &self.secret_key)
+            .field("salt", &hex::encode(self.salt))
+            .field("nonce", &self.counter)
+            .finish()
     }
 }
 
