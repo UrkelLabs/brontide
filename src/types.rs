@@ -1,10 +1,10 @@
 use hex;
-use std::fmt;
-use std::ops;
+use std::{fmt, ops, str::FromStr};
 
 //TODO only public types inside of this file.
 //I take this back possibly>
 //Implement debug
+#[derive(Eq, PartialEq)]
 pub struct SecretKey([u8; 32]);
 
 impl From<&[u8]> for SecretKey {
@@ -19,6 +19,16 @@ impl From<&[u8]> for SecretKey {
 impl From<[u8; 32]> for SecretKey {
     fn from(array: [u8; 32]) -> Self {
         SecretKey(array)
+    }
+}
+
+impl FromStr for SecretKey {
+    type Err = hex::FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let string = hex::decode(s)?;
+
+        Ok(SecretKey::from(string.as_slice()))
     }
 }
 
