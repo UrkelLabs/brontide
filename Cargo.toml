@@ -6,14 +6,20 @@ description = "A rust implementation of Handshake and Lightning Network's secure
 license = "MIT"
 edition = "2018"
 
+[features]
+stream = []
+
 [dependencies]
 chacha20-poly1305-aead = "0.1.2"
 hkdf = "0.7"
 sha2 = "0.8.0"
 secp256k1 = { version="0.13.0", features = ["rand"]}
 rand = "0.6.5"
-futures-preview = {version="=0.3.0-alpha.16", features = ["async-await", "nightly"]}
 hex = "0.3.2"
+
+#Optional
+futures-preview = {version="=0.3.0-alpha.16", features = ["async-await", "nightly"], optional = true}
+
 
 
 
