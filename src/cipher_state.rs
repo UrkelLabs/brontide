@@ -26,8 +26,8 @@ impl CipherState {
         let old = self.secret_key;
         let (salt, next) = expand(&old, &self.salt);
 
-        self.salt = Salt::from(salt);
-        self.secret_key = SecretKey::from(next);
+        self.salt = salt;
+        self.secret_key = next;
 
         self.counter = 0;
     }
@@ -79,7 +79,6 @@ impl CipherState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex;
 
     use std::str::FromStr;
 
@@ -136,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_cipher_state_encrypt() {
-        let (mut cipher, key, salt) = cipher_state_setup();
+        let (mut cipher, _, _) = cipher_state_setup();
 
         let plain_text = b"hello";
 
@@ -154,8 +153,6 @@ mod tests {
 
         let mut cipher_text2 = Vec::with_capacity(plain_text.len());
 
-        let associated_data = b"hello";
-
         let result = cipher.encrypt(plain_text, &[], &mut cipher_text2);
 
         assert!(result.is_ok());
@@ -167,8 +164,10 @@ mod tests {
         //Ensure nonce rotates and data isn't the same.
         assert_ne!(cipher_text, cipher_text2);
 
+        assert_ne!(tag, tag2);
+
         //Test associated data
-        let (mut cipher, key, salt) = cipher_state_setup();
+        let (mut cipher, _, _) = cipher_state_setup();
 
         let plain_text = b"hello";
 
@@ -205,8 +204,6 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let tag = result.unwrap();
-
         assert_ne!(cipher.secret_key, key);
 
         assert_ne!(cipher.salt, salt);
@@ -216,11 +213,9 @@ mod tests {
 
     #[test]
     fn test_cipher_state_decrypt() {
-        let (mut cipher, key, salt) = cipher_state_setup();
+        let (mut cipher, _, _) = cipher_state_setup();
 
         let plain_text = b"hello, friends";
-
-        cipher.counter = 999;
 
         let mut cipher_text = Vec::with_capacity(plain_text.len());
 
@@ -230,16 +225,36 @@ mod tests {
 
         let tag = result.unwrap();
 
-        let (mut cipher, key, salt) = cipher_state_setup();
+        let (mut cipher2, _, _) = cipher_state_setup();
 
-        //TODO fix these tests
-        // let mut plain_text_decrypted = Vec::with_capacity(cipher_text.len());
+        let mut plain_text_decrypted = Vec::with_capacity(plain_text.len());
 
-        // assert!(cipher.decrypt(&cipher_text, tag, &[], &mut plain_text_decrypted));
+        assert!(cipher2.decrypt(&cipher_text, tag, &[], &mut plain_text_decrypted));
 
-        // assert_eq!(plain_text, plain_text_decrypted.as_slice());
+        assert_eq!(plain_text, plain_text_decrypted.as_slice());
     }
 
-    //TODO test decrypt nonce rotation.
-    //
+    #[test]
+    fn test_cipher_state_decrypt_rotation() {
+        let (mut cipher, _, _) = cipher_state_setup();
+        let (mut cipher2, _, _) = cipher_state_setup();
+
+        for _ in 0..1001 {
+            let plain_text = b"hello, friends";
+
+            let mut cipher_text = Vec::with_capacity(plain_text.len());
+
+            let result = cipher.encrypt(plain_text, &[], &mut cipher_text);
+
+            assert!(result.is_ok());
+
+            let tag = result.unwrap();
+
+            let mut plain_text_decrypted = Vec::with_capacity(plain_text.len());
+
+            assert!(cipher2.decrypt(&cipher_text, tag, &[], &mut plain_text_decrypted));
+
+            assert_eq!(plain_text, plain_text_decrypted.as_slice());
+        }
+    }
 }
