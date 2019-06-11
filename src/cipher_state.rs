@@ -183,8 +183,6 @@ mod tests {
 
         assert_ne!(cipher_text3, plain_text);
 
-        // assert_ne!(cipher_text3, cipher_text);
-
         assert_ne!(tag, tag3);
     }
 
