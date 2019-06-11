@@ -1,20 +1,16 @@
 use crate::cipher_state::CipherState;
-use crate::handshake::HandshakeState;
-
 use crate::common::{PROLOGUE, VERSION};
-
-use crate::util::{ecdh, expand, get_public_key};
-
 use crate::error::Error;
+use crate::handshake::HandshakeState;
+use crate::types::Tag;
+use crate::util::{ecdh, expand, get_public_key};
 use crate::Result;
 
 use secp256k1::PublicKey;
 
-//TODO let's review props in this struct
 pub struct Brontide {
     //TODO this needs to be public *ONLY* to tests
     pub handshake_state: HandshakeState,
-    //Not sure if going option is the way to go here, but for now it works
     send_cipher: Option<CipherState>,
     receive_cipher: Option<CipherState>,
 }
@@ -71,7 +67,9 @@ impl Brontide {
         let tag = self
             .handshake_state
             .symmetric
-            .encrypt_hash(&[], &mut cipher_text);
+            .encrypt_hash(&[], &mut cipher_text)
+            .unwrap();
+        //TODO catch this error
 
         //const ACT_ONE_SIZE = 50;
         // let act_one = Buffer::new();
@@ -99,9 +97,9 @@ impl Brontide {
         //I think this is to 33 - double check
         //TODO change this to be what I did for recv act two
         let e = &act_one[1..34];
-        //TODO custom type.
-        let mut p = [0; 16];
-        p.copy_from_slice(&act_one[34..act_one.len()]);
+
+        //TODO actually, Act_One.tag() should return this
+        let p = Tag::from(&act_one[34..]);
 
         //We just want to verify here, might be an easier way than creating the actual key.
         //TODO
@@ -161,7 +159,9 @@ impl Brontide {
         let tag = self
             .handshake_state
             .symmetric
-            .encrypt_hash(&[], &mut cipher_text);
+            .encrypt_hash(&[], &mut cipher_text)
+            .unwrap();
+        //TODO catch the above error
 
         // const ACT_TWO_SIZE = 50;
         let mut act_two = [0_u8; 50];
@@ -185,10 +185,7 @@ impl Brontide {
         let mut e = [0; 33];
         e.copy_from_slice(&act_two[1..34]);
 
-        //TODO
-        let mut p = [0; 16];
-
-        p.copy_from_slice(&act_two[34..]);
+        let p = Tag::from(&act_two[34..]);
 
         //We just want to verify here, might be an easier way than creating the actual key.
         //TODO
@@ -235,7 +232,9 @@ impl Brontide {
         let tag_1 = self
             .handshake_state
             .symmetric
-            .encrypt_hash(&our_pub_key, &mut ct);
+            .encrypt_hash(&our_pub_key, &mut ct)
+            .unwrap();
+        //TODO need to catch above unwrap
         // let ct = our_pub_key;
 
         let s = ecdh(
@@ -249,7 +248,9 @@ impl Brontide {
         let tag_2 = self
             .handshake_state
             .symmetric
-            .encrypt_hash(&[], &mut cipher_text);
+            .encrypt_hash(&[], &mut cipher_text)
+            .unwrap();
+        //TODO catch this above error
 
         //const ACT_THREE_SIZE = 66;
         let mut act_three = [0_u8; 66];
@@ -274,11 +275,9 @@ impl Brontide {
 
         //TODO code smell here...
         let s1 = &act_three[1..34];
-        let mut p1 = [0; 16];
-        p1.copy_from_slice(&act_three[34..50]);
+        let p1 = Tag::from(&act_three[34..50]);
         // let s2 = &act_three[50..50];
-        let mut p2 = [0; 16];
-        p2.copy_from_slice(&act_three[50..]);
+        let p2 = Tag::from(&act_three[50..]);
 
         let mut plain_text = Vec::with_capacity(s1.len());
         // s
@@ -368,13 +367,13 @@ impl Brontide {
         packet.append(&mut cipher_text);
 
         //Write the first tag
-        packet.append(&mut tag);
+        packet.append(&mut tag.to_vec());
 
         //Write the message
         // packet.append(&mut data.clone());
 
         let mut cipher_text = Vec::with_capacity(length);
-        let mut tag = self
+        let tag = self
             .send_cipher
             .as_mut()
             .unwrap()
@@ -384,7 +383,7 @@ impl Brontide {
 
         packet.append(&mut cipher_text);
 
-        packet.append(&mut tag);
+        packet.append(&mut tag.to_vec());
 
         packet
     }
@@ -392,7 +391,7 @@ impl Brontide {
     //TODO return result
     pub fn read(&mut self, packet: &[u8]) -> Vec<u8> {
         let len = &packet[..2];
-        let tag1 = &packet[2..18];
+        let tag1 = Tag::from(&packet[2..18]);
 
         let mut plain_text = Vec::with_capacity(2);
         //TODO rewrite this.
@@ -400,7 +399,7 @@ impl Brontide {
             self.receive_cipher
                 .as_mut()
                 .unwrap()
-                .decrypt(&len, &tag1, &[], &mut plain_text);
+                .decrypt(&len, tag1, &[], &mut plain_text);
 
         let mut length: u16 = 0;
         let mut length_bytes = [0; 2];
@@ -422,7 +421,7 @@ impl Brontide {
         };
 
         let encrypted_message = &packet[18..18 + length as usize];
-        let tag2 = &packet[18 + length as usize..];
+        let tag2 = Tag::from(&packet[18 + length as usize..]);
 
         if !self.receive_cipher.as_mut().unwrap().decrypt(
             encrypted_message,

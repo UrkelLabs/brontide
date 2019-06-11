@@ -4,8 +4,24 @@ use std::{fmt, ops, str::FromStr};
 //TODO only public types inside of this file.
 //I take this back possibly>
 //Implement debug
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone, Copy)]
 pub struct SecretKey([u8; 32]);
+
+pub type Digest = SecretKey;
+
+pub type Salt = SecretKey;
+
+impl SecretKey {
+    pub fn empty() -> Self {
+        Default::default()
+    }
+}
+
+impl Default for SecretKey {
+    fn default() -> Self {
+        SecretKey([0_u8; 32])
+    }
+}
 
 impl From<&[u8]> for SecretKey {
     fn from(slice: &[u8]) -> Self {
@@ -46,6 +62,62 @@ impl ops::Deref for SecretKey {
     }
 }
 
+impl AsRef<[u8]> for SecretKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for SecretKey {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
+#[derive(Eq, PartialEq, Copy, Clone)]
+pub struct Tag([u8; 16]);
+
+impl From<[u8; 16]> for Tag {
+    fn from(tag: [u8; 16]) -> Self {
+        Tag(tag)
+    }
+}
+
+impl From<&[u8]> for Tag {
+    fn from(slice: &[u8]) -> Self {
+        let mut array = [0; 16];
+        array.copy_from_slice(slice);
+
+        Tag(array)
+    }
+}
+
+impl AsRef<[u8]> for Tag {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for Tag {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
+impl ops::Deref for Tag {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl fmt::Debug for Tag {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Tag: {}", hex::encode(self.0))
+    }
+}
+
 //Crate public Structs
 pub(crate) struct Nonce([u8; 12]);
 
@@ -66,19 +138,7 @@ impl ops::Deref for Nonce {
     }
 }
 
-// impl AsRef<[u8]> for SecretKey {
-//     fn as_ref(&self) -> &[u8] {
-//         &self.0
-//     }
-// }
-
-// impl AsMut<[u8]> for SecretKey {
-//     fn as_mut(&mut self) -> &mut [u8] {
-//         &mut self.0
-//     }
-// }
-
-pub struct PublicKey([u8; 32]);
+pub struct PublicKey([u8; 33]);
 
 // impl AsRef<[u8]> for PublicKey {
 //     fn as_ref(&self) -> &[u8] {

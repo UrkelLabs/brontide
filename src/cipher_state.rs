@@ -1,26 +1,20 @@
-use chacha20_poly1305_aead;
-
 use crate::common::ROTATION_INTERVAL;
+use crate::types::{Nonce, Salt, SecretKey, Tag};
 use crate::util::expand;
 use crate::Result;
+use chacha20_poly1305_aead;
 
-use crate::types::{Nonce, SecretKey};
-use std::fmt;
-
-//TODO more tests
-//TODO benchmarks
-
+#[derive(Debug)]
 pub(crate) struct CipherState {
     secret_key: SecretKey,
-    //TODO I think we should make salt a type as well.
-    salt: [u8; 32],
+    salt: Salt,
     //ChaCha20_poly1305 calls for a 96 bit nonce, with a 32 bit counter. Therefore we are only
     //going to use u32 as our counter as opposed to u64.
     counter: u32,
 }
 
 impl CipherState {
-    pub(crate) fn new(key: SecretKey, salt: [u8; 32]) -> Self {
+    pub(crate) fn new(key: SecretKey, salt: Salt) -> Self {
         CipherState {
             secret_key: key,
             salt,
@@ -32,16 +26,15 @@ impl CipherState {
         let old = self.secret_key;
         let (salt, next) = expand(&old, &self.salt);
 
-        self.salt.copy_from_slice(&salt);
+        self.salt = Salt::from(salt);
         self.secret_key = SecretKey::from(next);
 
         self.counter = 0;
     }
 
-    pub(crate) fn encrypt(&mut self, pt: &[u8], ad: &[u8], ct: &mut Vec<u8>) -> Result<Vec<u8>> {
+    pub(crate) fn encrypt(&mut self, pt: &[u8], ad: &[u8], ct: &mut Vec<u8>) -> Result<Tag> {
         let nonce = Nonce::from_counter(self.counter);
 
-        //TODO implement chacha20 ourselves, and place heavy importances on benchmarking
         let tag = chacha20_poly1305_aead::encrypt(&self.secret_key, &nonce, &ad, &pt, ct)?;
 
         self.counter += 1;
@@ -50,10 +43,10 @@ impl CipherState {
             self.rotate_key();
         }
 
-        Ok(tag.to_vec())
+        Ok(Tag::from(tag))
     }
 
-    pub(crate) fn decrypt(&mut self, ct: &[u8], tag: &[u8], ad: &[u8], pt: &mut Vec<u8>) -> bool {
+    pub(crate) fn decrypt(&mut self, ct: &[u8], tag: Tag, ad: &[u8], pt: &mut Vec<u8>) -> bool {
         let nonce = Nonce::from_counter(self.counter);
 
         let result = chacha20_poly1305_aead::decrypt(&self.secret_key, &nonce, &ad, &ct, &tag, pt);
@@ -77,20 +70,9 @@ impl CipherState {
         self.secret_key
     }
 
-    //TODO custom type here.
     #[cfg(test)]
-    pub fn salt(&self) -> [u8; 32] {
+    pub fn salt(&self) -> Salt {
         self.salt
-    }
-}
-
-impl fmt::Debug for CipherState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("CipherState")
-            .field("secret_key", &self.secret_key)
-            .field("salt", &hex::encode(self.salt))
-            .field("nonce", &self.counter)
-            .finish()
     }
 }
 
@@ -99,41 +81,29 @@ mod tests {
     use super::*;
     use hex;
 
-    fn cipher_state_setup() -> (CipherState, [u8; 32], [u8; 32]) {
-        let mut key = [0_u8; 32];
-        key.copy_from_slice(
-            &hex::decode("2121212121212121212121212121212121212121212121212121212121212121")
-                .unwrap(),
-        );
+    use std::str::FromStr;
 
-        let mut salt = [0_u8; 32];
-        salt.copy_from_slice(
-            &hex::decode("1111111111111111111111111111111111111111111111111111111111111111")
-                .unwrap(),
-        );
+    fn cipher_state_setup() -> (CipherState, SecretKey, Salt) {
+        let key =
+            SecretKey::from_str("2121212121212121212121212121212121212121212121212121212121212121")
+                .expect("invalid private key");
+
+        let salt =
+            Salt::from_str("1111111111111111111111111111111111111111111111111111111111111111")
+                .expect("invalid salt");
 
         (CipherState::new(key, salt), key, salt)
     }
 
-    //TODO Intergrate random tests
-    // fn cipher_state_setup_random() {
-
-    // }
-
     #[test]
     fn test_cipher_state_new() {
-        //TODO use random bytes
-        let mut key = [0_u8; 32];
-        key.copy_from_slice(
-            &hex::decode("2121212121212121212121212121212121212121212121212121212121212121")
-                .unwrap(),
-        );
+        let key =
+            SecretKey::from_str("2121212121212121212121212121212121212121212121212121212121212121")
+                .expect("invalid private key");
 
-        let mut salt = [0_u8; 32];
-        salt.copy_from_slice(
-            &hex::decode("1111111111111111111111111111111111111111111111111111111111111111")
-                .unwrap(),
-        );
+        let salt =
+            Salt::from_str("1111111111111111111111111111111111111111111111111111111111111111")
+                .expect("invalid salt");
 
         let cipher = CipherState::new(key, salt);
 
@@ -144,19 +114,13 @@ mod tests {
 
     #[test]
     fn test_cipher_state_rotate_key() {
-        //TODO use random bytes here.
-        //TODO one test with random bytes, one not
-        let mut key = [0_u8; 32];
-        key.copy_from_slice(
-            &hex::decode("2121212121212121212121212121212121212121212121212121212121212121")
-                .unwrap(),
-        );
+        let key =
+            SecretKey::from_str("2121212121212121212121212121212121212121212121212121212121212121")
+                .expect("invalid private key");
 
-        let mut salt = [0_u8; 32];
-        salt.copy_from_slice(
-            &hex::decode("1111111111111111111111111111111111111111111111111111111111111111")
-                .unwrap(),
-        );
+        let salt =
+            SecretKey::from_str("1111111111111111111111111111111111111111111111111111111111111111")
+                .expect("invalid salt");
 
         let mut cipher = CipherState::new(key, salt);
 
@@ -176,51 +140,53 @@ mod tests {
 
         let plain_text = b"hello";
 
-        let associated_data = b"hello";
-
         let mut cipher_text = Vec::with_capacity(plain_text.len());
 
-        let result = cipher.encrypt(plain_text, associated_data, &mut cipher_text);
+        let result = cipher.encrypt(plain_text, &[], &mut cipher_text);
 
         assert!(result.is_ok());
 
-        let cipher_data = result.unwrap();
+        let tag = result.unwrap();
 
-        assert_ne!(cipher_data, plain_text);
+        assert_ne!(plain_text, cipher_text.as_slice());
 
         //Round 2
 
-        let mut cipher_text = Vec::with_capacity(plain_text.len());
+        let mut cipher_text2 = Vec::with_capacity(plain_text.len());
 
-        let result = cipher.encrypt(plain_text, associated_data, cipher_text.as_mut());
+        let associated_data = b"hello";
+
+        let result = cipher.encrypt(plain_text, &[], &mut cipher_text2);
 
         assert!(result.is_ok());
 
-        let cipher_data2 = result.unwrap();
+        let tag2 = result.unwrap();
 
-        assert_ne!(cipher_data, plain_text);
+        assert_ne!(cipher_text2, plain_text);
 
         //Ensure nonce rotates and data isn't the same.
-        assert_ne!(cipher_data, cipher_data2);
+        assert_ne!(cipher_text, cipher_text2);
 
-        //Test Cipher is deterministic
+        //Test associated data
         let (mut cipher, key, salt) = cipher_state_setup();
 
         let plain_text = b"hello";
 
-        let associated_data = b"hello";
+        let associated_data = b"testtest123";
 
-        let mut cipher_text = Vec::with_capacity(plain_text.len());
+        let mut cipher_text3 = Vec::with_capacity(plain_text.len());
 
-        let result = cipher.encrypt(plain_text, associated_data, &mut cipher_text);
+        let result = cipher.encrypt(plain_text, associated_data, &mut cipher_text3);
 
         assert!(result.is_ok());
 
-        let cipher_data2 = result.unwrap();
+        let tag3 = result.unwrap();
 
-        assert_ne!(cipher_data2, plain_text);
+        assert_ne!(cipher_text3, plain_text);
 
-        assert_eq!(cipher_data, cipher_data2);
+        // assert_ne!(cipher_text3, cipher_text);
+
+        assert_ne!(tag, tag3);
     }
 
     #[test]
@@ -239,9 +205,7 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let cipher_data = result.unwrap();
-
-        assert_ne!(cipher_data, plain_text);
+        let tag = result.unwrap();
 
         assert_ne!(cipher.secret_key, key);
 
@@ -250,27 +214,32 @@ mod tests {
         assert_eq!(cipher.counter, 0);
     }
 
-    //#[test]
-    //fn test_cipher_state_decrypt() {
-    //    //TODO put this in a test setup function.
-    //    //Or hardcode the encrypted stuff.
-    //    let (mut cipher, key, salt) = cipher_state_setup();
+    #[test]
+    fn test_cipher_state_decrypt() {
+        let (mut cipher, key, salt) = cipher_state_setup();
 
-    //    let plain_text = b"hello, friends";
+        let plain_text = b"hello, friends";
 
-    //    let associated_data = b"test123";
+        cipher.counter = 999;
 
-    //    cipher.counter = 999;
+        let mut cipher_text = Vec::with_capacity(plain_text.len());
 
-    //    let result = cipher.encrypt(plain_text, associated_data);
+        let result = cipher.encrypt(plain_text, &[], &mut cipher_text);
 
-    //    assert!(result.is_ok());
+        assert!(result.is_ok());
 
-    //    let cipher_data = result.unwrap();
-    //}
+        let tag = result.unwrap();
+
+        let (mut cipher, key, salt) = cipher_state_setup();
+
+        //TODO fix these tests
+        // let mut plain_text_decrypted = Vec::with_capacity(cipher_text.len());
+
+        // assert!(cipher.decrypt(&cipher_text, tag, &[], &mut plain_text_decrypted));
+
+        // assert_eq!(plain_text, plain_text_decrypted.as_slice());
+    }
 
     //TODO test decrypt nonce rotation.
     //
-    //TODO test panics as well, apparently there is a macro for this.
-    //TODO fuzzing -> See rust bitcoin lib
 }

@@ -1,3 +1,4 @@
+use crate::types;
 use hex;
 use hkdf::Hkdf;
 use secp256k1::{ecdh::SharedSecret, PublicKey, Secp256k1, SecretKey};
@@ -5,7 +6,7 @@ use sha2::Sha256;
 use std::convert::TryInto;
 
 //TODO see if we need this to be a hardcoded array of 32, or if it can be variable.
-pub(crate) fn expand(secret: &[u8], salt: &[u8]) -> ([u8; 32], [u8; 32]) {
+pub(crate) fn expand(secret: &[u8], salt: &[u8]) -> (types::SecretKey, types::SecretKey) {
     //TODO test this logic.
     //TODO test and benchmark this, transfer those to HSd.
     //hk.prk
