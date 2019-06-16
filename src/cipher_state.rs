@@ -125,9 +125,15 @@ mod tests {
 
         cipher.rotate_key();
 
-        //Key and salt should be different.
-        assert_ne!(cipher.secret_key, key);
-        assert_ne!(cipher.salt, salt);
+        let expected_key =
+            SecretKey::from_str("0b579ba44366e4d49ac7a44a8203925cb6d610e950aee7a23c47a5448173af11")
+                .expect("invalid salt");
+        let expected_salt =
+            SecretKey::from_str("be23775b41e7c67d1ec6dcfc21299f32461e145d4164f65943b4b99fcaff6dee")
+                .expect("invalid salt");
+
+        assert_eq!(cipher.secret_key, expected_key);
+        assert_eq!(cipher.salt, expected_salt);
 
         //Counter should be reset
         assert_eq!(cipher.counter, 0);
@@ -149,6 +155,18 @@ mod tests {
 
         assert_ne!(plain_text, cipher_text.as_slice());
 
+        let expected_tag = Tag::from(
+            hex::decode("f11ae60b9df4c6ea25aea58ce1b6df83")
+                .expect("invalid tag")
+                .as_slice(),
+        );
+
+        let expected_cipher_text = hex::decode("0935b4c530").expect("invalid cipher text");
+
+        assert_eq!(tag, expected_tag);
+
+        assert_eq!(cipher_text, expected_cipher_text);
+
         //Round 2
 
         let mut cipher_text2 = Vec::with_capacity(plain_text.len());
@@ -161,29 +179,66 @@ mod tests {
 
         assert_ne!(cipher_text2, plain_text);
 
-        //Ensure nonce rotates and data isn't the same.
-        assert_ne!(cipher_text, cipher_text2);
+        let expected_tag2 = Tag::from(
+            hex::decode("d840242a1e817cd8374d45fb5621a5fc")
+                .expect("invalid tag")
+                .as_slice(),
+        );
 
-        assert_ne!(tag, tag2);
+        let expected_cipher_text2 = hex::decode("74898781da").expect("invalid cipher text");
 
+        assert_eq!(tag2, expected_tag2);
+
+        assert_eq!(cipher_text2, expected_cipher_text2);
+    }
+
+    #[test]
+    fn test_cipher_state_encrypt_with_ad() {
         //Test associated data
         let (mut cipher, _, _) = cipher_state_setup();
 
         let plain_text = b"hello";
 
-        let associated_data = b"testtest123";
+        let associated_data =
+            hex::decode("222222222222222222222222222222222222").expect("invalid associated data");
 
-        let mut cipher_text3 = Vec::with_capacity(plain_text.len());
+        let mut cipher_text = Vec::with_capacity(plain_text.len());
 
-        let result = cipher.encrypt(plain_text, associated_data, &mut cipher_text3);
+        let result = cipher.encrypt(plain_text, &associated_data, &mut cipher_text);
 
         assert!(result.is_ok());
 
-        let tag3 = result.unwrap();
+        let tag = result.unwrap();
 
-        assert_ne!(cipher_text3, plain_text);
+        let expected_tag = Tag::from(
+            hex::decode("81ad416f62157481c8af8ace16b64e15")
+                .expect("invalid tag")
+                .as_slice(),
+        );
 
-        assert_ne!(tag, tag3);
+        let expected_cipher_text = hex::decode("0935b4c530").expect("invalid cipher text");
+
+        assert_eq!(tag, expected_tag);
+        assert_eq!(cipher_text, expected_cipher_text);
+
+        let mut cipher_text2 = Vec::with_capacity(plain_text.len());
+
+        let result = cipher.encrypt(plain_text, &associated_data, &mut cipher_text2);
+
+        assert!(result.is_ok());
+
+        let tag2 = result.unwrap();
+
+        let expected_tag2 = Tag::from(
+            hex::decode("df3f8257977dfb8d283c6fb149d2d49d")
+                .expect("invalid tag")
+                .as_slice(),
+        );
+
+        let expected_cipher_text2 = hex::decode("74898781da").expect("invalid cipher text");
+
+        assert_eq!(tag2, expected_tag2);
+        assert_eq!(cipher_text2, expected_cipher_text2);
     }
 
     #[test]
