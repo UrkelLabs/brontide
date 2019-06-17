@@ -1,12 +1,13 @@
-use crate::types;
-use hex;
+use crate::types::{PublicKey, SecretKey, SharedSecret};
+use crate::Result;
 use hkdf::Hkdf;
-use secp256k1::{ecdh::SharedSecret, PublicKey, Secp256k1, SecretKey};
+use secp256k1::{self, ecdh, Secp256k1};
 use sha2::Sha256;
 use std::convert::TryInto;
+use std::str::FromStr;
 
 //TODO see if we need this to be a hardcoded array of 32, or if it can be variable.
-pub(crate) fn expand(secret: &[u8], salt: &[u8]) -> (types::SecretKey, types::SecretKey) {
+pub(crate) fn expand(secret: &[u8], salt: &[u8]) -> (SecretKey, SecretKey) {
     //TODO test this logic.
     //TODO test and benchmark this, transfer those to HSd.
     //hk.prk
@@ -22,35 +23,24 @@ pub(crate) fn expand(secret: &[u8], salt: &[u8]) -> (types::SecretKey, types::Se
     )
 }
 
-pub(crate) fn get_public_key(private_key: [u8; 32]) -> [u8; 33] {
+pub(crate) fn get_public_key(key: SecretKey) -> Result<PublicKey> {
     let secp = Secp256k1::new();
-    //TODO handle this error correctly.
-    let secret_key = SecretKey::from_slice(&private_key).expect("32 bytes, within curve order");
-    let public_key = PublicKey::from_secret_key(&secp, &secret_key);
 
-    let mut key = [0_u8; 33];
+    let secret_key = secp256k1::SecretKey::from_slice(&key)?;
+    let public_key = secp256k1::PublicKey::from_secret_key(&secp, &secret_key);
 
-    //TODO remove this unwrap and handle accordingly.
-    key.copy_from_slice(&hex::decode(public_key.to_string()).unwrap());
+    let key = PublicKey::from_str(&public_key.to_string())?;
 
-    key
+    Ok(key)
 }
 
-//TODO double check the shared secret is 32 bits
-//Return a Result TODO
-pub(crate) fn ecdh(public_key: [u8; 33], private_key: [u8; 32]) -> [u8; 32] {
-    //TODO super ugly, let's clean this up with better error handling
-    let secret = SharedSecret::new(
-        &PublicKey::from_slice(&public_key).unwrap(),
-        &SecretKey::from_slice(&private_key).unwrap(),
+pub(crate) fn ecdh(public_key: PublicKey, private_key: SecretKey) -> Result<SharedSecret> {
+    let secret = ecdh::SharedSecret::new(
+        &secp256k1::PublicKey::from_slice(&public_key)?,
+        &secp256k1::SecretKey::from_slice(&private_key)?,
     );
 
-    //TODO this is how we use the FFI library better, use this example for the rest of the code.
-    let secret_vec = secret[..].to_vec();
+    let shared_secret = SharedSecret::from(secret[..].to_vec().as_ref());
 
-    let mut return_digest = [0_u8; 32];
-
-    return_digest.copy_from_slice(secret_vec.as_slice());
-
-    return_digest
+    Ok(shared_secret)
 }
