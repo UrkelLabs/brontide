@@ -2,11 +2,11 @@ use crate::cipher_state::CipherState;
 use crate::common::{PROLOGUE, VERSION};
 use crate::error::Error;
 use crate::handshake::HandshakeState;
-use crate::types::Tag;
+use crate::types::{PublicKey, SecretKey, Tag};
 use crate::util::{ecdh, expand, get_public_key};
 use crate::Result;
 
-use secp256k1::PublicKey;
+use secp256k1;
 
 pub struct Brontide {
     //TODO this needs to be public *ONLY* to tests
@@ -15,30 +15,41 @@ pub struct Brontide {
     receive_cipher: Option<CipherState>,
 }
 
-//TODO need to implement errors in all of this.
 impl Brontide {
-    //TODO I DON't think we need this here.
-    //TODO remove option if it's not used..
-    pub fn new(
+    pub fn new<L, R>(
         initiator: bool,
-        local_pub: [u8; 32],
-        remote_pub: Option<[u8; 33]>,
+        local_pub: L,
+        remote_pub: Option<R>,
         prologue: Option<&str>,
-    ) -> Self {
+    ) -> Self
+    where
+        L: Into<SecretKey>,
+        R: Into<PublicKey>,
+    {
         //I think Prologue needs to be an option here actually.
+        //Copy the loop below this instead.
         let brontide_prologue: &str;
         if prologue.is_some() {
             brontide_prologue = prologue.unwrap();
         } else {
             brontide_prologue = PROLOGUE;
         };
+        //TODO rename local pub
+
+        let remote_pub_key: Option<PublicKey>;
+
+        if let Some(key) = remote_pub {
+            remote_pub_key = Some(key.into());
+        } else {
+            remote_pub_key = None;
+        }
 
         Brontide {
             handshake_state: HandshakeState::new(
                 initiator,
                 brontide_prologue,
-                local_pub,
-                remote_pub,
+                local_pub.into(),
+                remote_pub_key,
             ),
             send_cipher: None,
             receive_cipher: None,
@@ -46,45 +57,31 @@ impl Brontide {
     }
 
     //TODO replace with ACT_ONE Custom type.
-    pub fn gen_act_one(&mut self) -> [u8; 50] {
+    pub fn gen_act_one(&mut self) -> Result<[u8; 50]> {
         // e
-        self.handshake_state.local_ephemeral = (self.handshake_state.generate_key)();
-        let ephemeral = get_public_key(self.handshake_state.local_ephemeral);
-        //TODO double check this.
+        self.handshake_state.local_ephemeral = (self.handshake_state.generate_key)()?;
+        let ephemeral = get_public_key(self.handshake_state.local_ephemeral)?;
         self.handshake_state.symmetric.mix_digest(&ephemeral, None);
 
         //ec
         let s = ecdh(
             self.handshake_state.remote_static,
             self.handshake_state.local_ephemeral,
-        );
+        )?;
         self.handshake_state.symmetric.mix_key(&s);
 
-        //TODO needs to be an empty buffer of 32 bytes. - Make this a constant when moved to new
-        //package
-        //TODO decide whether this is 32 0s, or empty.
         let mut cipher_text = Vec::with_capacity(0);
         let tag = self
             .handshake_state
             .symmetric
-            .encrypt_hash(&[], &mut cipher_text)
-            .unwrap();
-        //TODO catch this error
+            .encrypt_hash(&[], &mut cipher_text)?;
 
-        //const ACT_ONE_SIZE = 50;
-        // let act_one = Buffer::new();
         let mut act_one = [0_u8; 50];
         act_one[0] = VERSION;
-        //Double check this operation TODO
-        //Might have to splice from 1..ephemeral.len() + 1
-        //Double check this TODO
         act_one[1..34].copy_from_slice(&ephemeral);
-
-        //Double check this operation TODO
-        //Might have to splice from 1...tag.len() + 34
         act_one[34..].copy_from_slice(&tag);
 
-        act_one
+        Ok(act_one)
     }
 
     pub fn recv_act_one(&mut self, act_one: [u8; 50]) -> Result<()> {
@@ -92,26 +89,19 @@ impl Brontide {
             return Err(Error::Version("Act one: bad version.".to_owned()));
         }
 
-        //TODO check these operations to ensure proper slicing //inclusive/exclusive etc.
-        //TODO also check on the borrowing here, doesn't smell right.
-        //I think this is to 33 - double check
-        //TODO change this to be what I did for recv act two
         let e = &act_one[1..34];
-
         //TODO actually, Act_One.tag() should return this
         let p = Tag::from(&act_one[34..]);
-
         //We just want to verify here, might be an easier way than creating the actual key.
         //TODO
-        let result = PublicKey::from_slice(e);
+        let result = secp256k1::PublicKey::from_slice(e);
 
-        if !result.is_ok() {
+        if result.is_err() {
             return Err(Error::BadKey("Act one: bad key.".to_owned()));
         }
 
         //e
-        //TODO code smell
-        self.handshake_state.remote_ephemeral.copy_from_slice(e);
+        self.handshake_state.remote_ephemeral = PublicKey::from(e);
         self.handshake_state
             .symmetric
             .mix_digest(&self.handshake_state.remote_ephemeral, None);
@@ -120,12 +110,10 @@ impl Brontide {
         let s = ecdh(
             self.handshake_state.remote_ephemeral,
             self.handshake_state.local_static,
-        );
+        )?;
         self.handshake_state.symmetric.mix_key(&s);
 
         let mut plain_text = Vec::with_capacity(0);
-        //TODO must be empty buffer, not new buffer.
-        //TODO code smell
         if !self
             .handshake_state
             .symmetric
@@ -138,41 +126,32 @@ impl Brontide {
     }
 
     //TODO custom type return
-    pub fn gen_act_two(&mut self) -> [u8; 50] {
+    pub fn gen_act_two(&mut self) -> Result<[u8; 50]> {
         // e
-        self.handshake_state.local_ephemeral = (self.handshake_state.generate_key)();
+        self.handshake_state.local_ephemeral = (self.handshake_state.generate_key)()?;
 
-        let ephemeral = get_public_key(self.handshake_state.local_ephemeral);
-
+        let ephemeral = get_public_key(self.handshake_state.local_ephemeral)?;
         self.handshake_state.symmetric.mix_digest(&ephemeral, None);
 
         // ee
         let s = ecdh(
             self.handshake_state.remote_ephemeral,
             self.handshake_state.local_ephemeral,
-        );
+        )?;
         self.handshake_state.symmetric.mix_key(&s);
 
-        //TODO again this needs to be empty buffer, NOT new buffer.
-        //TODO empty or 0s?
         let mut cipher_text = Vec::with_capacity(0);
         let tag = self
             .handshake_state
             .symmetric
-            .encrypt_hash(&[], &mut cipher_text)
-            .unwrap();
-        //TODO catch the above error
+            .encrypt_hash(&[], &mut cipher_text)?;
 
-        // const ACT_TWO_SIZE = 50;
         let mut act_two = [0_u8; 50];
         act_two[0] = VERSION;
-
-        //TODO all the issues from act one apply here as well, this code needs to be thoroughly
-        //checked and tested.
         act_two[1..34].copy_from_slice(&ephemeral);
         act_two[34..].copy_from_slice(&tag);
 
-        act_two
+        Ok(act_two)
     }
 
     pub fn recv_act_two(&mut self, act_two: [u8; 50]) -> Result<()> {
@@ -180,24 +159,18 @@ impl Brontide {
             return Err(Error::Version("Act two: bad version.".to_owned()));
         }
 
-        //TODO check these operations to ensure proper slicing //inclusive/exclusive etc.
-        //TODO also check on the borrowing here, doesn't smell right.
         let mut e = [0; 33];
         e.copy_from_slice(&act_two[1..34]);
-
         let p = Tag::from(&act_two[34..]);
 
-        //We just want to verify here, might be an easier way than creating the actual key.
-        //TODO
-        let result = PublicKey::from_slice(&e);
+        let result = secp256k1::PublicKey::from_slice(&e);
 
-        if !result.is_ok() {
+        if result.is_err() {
             return Err(Error::BadKey("Act two: bad key.".to_owned()));
         }
 
         //e
-        //TODO code smell
-        self.handshake_state.remote_ephemeral.copy_from_slice(&e);
+        self.handshake_state.remote_ephemeral = PublicKey::from(e);
         self.handshake_state
             .symmetric
             .mix_digest(&self.handshake_state.remote_ephemeral, None);
@@ -206,12 +179,10 @@ impl Brontide {
         let s = ecdh(
             self.handshake_state.remote_ephemeral,
             self.handshake_state.local_ephemeral,
-        );
+        )?;
         self.handshake_state.symmetric.mix_key(&s);
 
         let mut plain_text = Vec::with_capacity(0);
-        //TODO must be empty buffer, not new buffer.
-        //TODO code smell
         if !self
             .handshake_state
             .symmetric
@@ -224,23 +195,21 @@ impl Brontide {
     }
 
     //TODO custom act three type
-    pub fn gen_act_three(&mut self) -> [u8; 66] {
-        let our_pub_key = get_public_key(self.handshake_state.local_static);
-        //We need to pass cipher text into here, since we don't encrypt in memory.
-        //TODO double check sizing on here.
+    pub fn gen_act_three(&mut self) -> Result<[u8; 66]> {
+        let our_pub_key = get_public_key(self.handshake_state.local_static)?;
+
+        //TODO let's get this number harded in ActThree.ct size?
+        //no magic numbers
         let mut ct = Vec::with_capacity(33);
         let tag_1 = self
             .handshake_state
             .symmetric
-            .encrypt_hash(&our_pub_key, &mut ct)
-            .unwrap();
-        //TODO need to catch above unwrap
-        // let ct = our_pub_key;
+            .encrypt_hash(&our_pub_key, &mut ct)?;
 
         let s = ecdh(
             self.handshake_state.remote_ephemeral,
             self.handshake_state.local_static,
-        );
+        )?;
 
         self.handshake_state.symmetric.mix_key(&s);
 
@@ -248,22 +217,17 @@ impl Brontide {
         let tag_2 = self
             .handshake_state
             .symmetric
-            .encrypt_hash(&[], &mut cipher_text)
-            .unwrap();
-        //TODO catch this above error
+            .encrypt_hash(&[], &mut cipher_text)?;
 
-        //const ACT_THREE_SIZE = 66;
         let mut act_three = [0_u8; 66];
         act_three[0] = VERSION;
-
-        //TODO code smell
         act_three[1..34].copy_from_slice(&ct);
         act_three[34..50].copy_from_slice(&tag_1);
         act_three[50..].copy_from_slice(&tag_2);
 
         self.split();
 
-        act_three
+        Ok(act_three)
     }
 
     //Code smell on our errors here -> They are in different order than the above functions.
@@ -273,13 +237,14 @@ impl Brontide {
             return Err(Error::Version("Act three: bad version.".to_owned()));
         }
 
-        //TODO code smell here...
         let s1 = &act_three[1..34];
         let p1 = Tag::from(&act_three[34..50]);
+        //TODO
         // let s2 = &act_three[50..50];
         let p2 = Tag::from(&act_three[50..]);
 
         let mut plain_text = Vec::with_capacity(s1.len());
+
         // s
         if !self
             .handshake_state
@@ -291,21 +256,19 @@ impl Brontide {
 
         let remote_public = plain_text;
 
-        let result = PublicKey::from_slice(&remote_public);
+        let result = secp256k1::PublicKey::from_slice(&remote_public);
 
         if result.is_err() {
             return Err(Error::BadKey("Act three: bad key.".to_owned()));
         }
 
-        self.handshake_state
-            .remote_static
-            .copy_from_slice(&remote_public);
+        self.handshake_state.remote_static = PublicKey::from(remote_public.as_slice());
 
         // se
         let se = ecdh(
             self.handshake_state.remote_static,
             self.handshake_state.local_ephemeral,
-        );
+        )?;
         self.handshake_state.symmetric.mix_key(&se);
 
         let mut plain_text = Vec::with_capacity(0);
@@ -322,26 +285,15 @@ impl Brontide {
         Ok(())
     }
 
-    //TODO read
-    pub fn write(&mut self, data: Vec<u8>) -> Vec<u8> {
-        //if data.len() <= 0xffff {
-        //this is covered below in the u16 max
-        //    //throw error -> Not sure what yet though TODO
-        //}
-
-        //Needs to be a packet of length 2 + 16 + data.len() + 16
-        //TODO I think this is correct
-        let mut packet = Vec::new();
-
-        //Code smell
-        //TODO only supposed to copy the len if it were a u16
-        // packet.copy_from_slice(&data.len().to_be_bytes()[..1]);
+    pub fn write(&mut self, data: Vec<u8>) -> Result<Vec<u8>> {
         let length = data.len();
 
         if length > std::u16::MAX as usize {
-            //Throw error here.
-            //TODO
+            return Err(Error::DataTooLarge("Data length too big".to_owned()));
         }
+
+        //TODO convert these numbers to constants
+        let mut packet = Vec::with_capacity(2 + 16 + data.len() + 16);
 
         let length_shortened = length as u16;
 
@@ -349,43 +301,34 @@ impl Brontide {
         let mut length_buffer = [0; 2];
         length_buffer.copy_from_slice(&length_shortened.to_be_bytes());
 
-        //Write the length
-        // packet.append(&mut length_buffer.to_vec());
-
         //TODO not sure this is the correct capacity.
         let mut cipher_text = Vec::with_capacity(2);
         //TODO we should probably make ciphers as non-options since they need to hold state.
-        let mut tag = self
+        let tag = self
             .send_cipher
             .as_mut()
             .unwrap()
             //TODO catch error here, don't unwrap
             // .encrypt(&length.to_be_bytes(), &[], &mut cipher_text)
-            .encrypt(&length_buffer, &[], &mut cipher_text)
-            .unwrap();
+            .encrypt(&length_buffer, &[], &mut cipher_text)?;
 
         packet.append(&mut cipher_text);
 
         //Write the first tag
         packet.append(&mut tag.to_vec());
 
-        //Write the message
-        // packet.append(&mut data.clone());
-
         let mut cipher_text = Vec::with_capacity(length);
         let tag = self
             .send_cipher
             .as_mut()
             .unwrap()
-            .encrypt(&data, &[], &mut cipher_text)
-            //Catch this error.
-            .unwrap();
+            .encrypt(&data, &[], &mut cipher_text)?;
 
         packet.append(&mut cipher_text);
 
         packet.append(&mut tag.to_vec());
 
-        packet
+        Ok(packet)
     }
 
     //TODO return result
@@ -416,8 +359,6 @@ impl Brontide {
         if packet.len() != 16 + length as usize + 18 {
             //Throw error
             println!("bad size");
-            dbg!(packet.len());
-            dbg!(16 + length + 18);
         };
 
         let encrypted_message = &packet[18..18 + length as usize];
@@ -469,9 +410,4 @@ impl Brontide {
     pub fn initiator(&self) -> bool {
         self.handshake_state.initiator
     }
-
-    // #[cfg(test)]
-    // pub fn for receive and send cipher
-
-    //TODO expose send and receive cipher secret keys.
 }
