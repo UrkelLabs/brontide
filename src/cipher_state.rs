@@ -247,19 +247,23 @@ mod tests {
 
         let plain_text = b"hello, friends";
 
-        let associated_data = b"test123";
-
         cipher.counter = 999;
 
         let mut cipher_text = Vec::with_capacity(plain_text.len());
 
-        let result = cipher.encrypt(plain_text, associated_data, &mut cipher_text);
+        let result = cipher.encrypt(plain_text, &[], &mut cipher_text);
 
         assert!(result.is_ok());
 
-        assert_ne!(cipher.secret_key, key);
+        let expected_key =
+            SecretKey::from_str("0b579ba44366e4d49ac7a44a8203925cb6d610e950aee7a23c47a5448173af11")
+                .expect("invalid salt");
+        let expected_salt =
+            SecretKey::from_str("be23775b41e7c67d1ec6dcfc21299f32461e145d4164f65943b4b99fcaff6dee")
+                .expect("invalid salt");
 
-        assert_ne!(cipher.salt, salt);
+        assert_eq!(cipher.secret_key, expected_key);
+        assert_eq!(cipher.salt, expected_salt);
 
         assert_eq!(cipher.counter, 0);
     }
@@ -268,7 +272,7 @@ mod tests {
     fn test_cipher_state_decrypt() {
         let (mut cipher, _, _) = cipher_state_setup();
 
-        let plain_text = b"hello, friends";
+        let plain_text = b"hello";
 
         let mut cipher_text = Vec::with_capacity(plain_text.len());
 
@@ -293,7 +297,7 @@ mod tests {
         let (mut cipher2, _, _) = cipher_state_setup();
 
         for _ in 0..1001 {
-            let plain_text = b"hello, friends";
+            let plain_text = b"hello";
 
             let mut cipher_text = Vec::with_capacity(plain_text.len());
 
