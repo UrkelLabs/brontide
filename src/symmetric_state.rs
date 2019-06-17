@@ -1,12 +1,11 @@
 use crate::cipher_state::CipherState;
-use crate::types;
-use crate::types::{Salt, SecretKey, Tag};
+use crate::types::{self, Salt, SecretKey, Tag};
 use crate::util::expand;
 use crate::Result;
 use sha2::{Digest, Sha256};
 
 #[derive(Debug)]
-pub struct SymmetricState {
+pub(crate) struct SymmetricState {
     cipher: CipherState,
     pub(crate) chaining_key: SecretKey,
     digest: types::Digest,
@@ -20,7 +19,7 @@ impl SymmetricState {
 
         SymmetricState {
             cipher: CipherState::new(SecretKey::empty(), Salt::empty()),
-            chaining_key: digest.clone(),
+            chaining_key: digest,
             digest,
         }
     }
@@ -48,7 +47,11 @@ impl SymmetricState {
         self.digest = types::Digest::from(result.as_slice());
     }
 
-    pub fn encrypt_hash(&mut self, plain_text: &[u8], cipher_text: &mut Vec<u8>) -> Result<Tag> {
+    pub(crate) fn encrypt_hash(
+        &mut self,
+        plain_text: &[u8],
+        cipher_text: &mut Vec<u8>,
+    ) -> Result<Tag> {
         let tag = self.cipher.encrypt(plain_text, &self.digest, cipher_text)?;
 
         self.mix_digest(cipher_text, Some(tag));
@@ -56,7 +59,12 @@ impl SymmetricState {
         Ok(tag)
     }
 
-    pub fn decrypt_hash(&mut self, cipher_text: &[u8], tag: Tag, plain_text: &mut Vec<u8>) -> bool {
+    pub(crate) fn decrypt_hash(
+        &mut self,
+        cipher_text: &[u8],
+        tag: Tag,
+        plain_text: &mut Vec<u8>,
+    ) -> bool {
         let result = self
             .cipher
             .decrypt(cipher_text, tag, &self.digest, plain_text);
