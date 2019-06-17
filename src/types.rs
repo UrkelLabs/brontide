@@ -11,6 +11,8 @@ pub type Digest = SecretKey;
 
 pub type Salt = SecretKey;
 
+pub type SharedSecret = SecretKey;
+
 impl SecretKey {
     pub fn empty() -> Self {
         Default::default()
@@ -138,16 +140,68 @@ impl ops::Deref for Nonce {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct PublicKey([u8; 33]);
 
-// impl AsRef<[u8]> for PublicKey {
-//     fn as_ref(&self) -> &[u8] {
-//         &self.0
-//     }
-// }
+impl PublicKey {
+    pub fn empty() -> Self {
+        Default::default()
+    }
+}
 
-// impl AsMut<[u8]> for PublicKey {
-//     fn as_mut(&mut self) -> &mut [u8] {
-//         &mut self.0
-//     }
-// }
+impl From<&[u8]> for PublicKey {
+    fn from(slice: &[u8]) -> Self {
+        let mut array = [0; 33];
+        array.copy_from_slice(slice);
+
+        PublicKey(array)
+    }
+}
+
+impl From<[u8; 33]> for PublicKey {
+    fn from(array: [u8; 33]) -> Self {
+        PublicKey(array)
+    }
+}
+
+impl FromStr for PublicKey {
+    type Err = hex::FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let string = hex::decode(s)?;
+
+        Ok(PublicKey::from(string.as_slice()))
+    }
+}
+
+impl fmt::Debug for PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "PublicKey: {}", hex::encode(self.0.to_vec()))
+    }
+}
+
+impl Default for PublicKey {
+    fn default() -> Self {
+        PublicKey([0_u8; 33])
+    }
+}
+
+impl AsRef<[u8]> for PublicKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for PublicKey {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
+impl ops::Deref for PublicKey {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
