@@ -64,16 +64,6 @@ impl CipherState {
             Err(_) => false,
         }
     }
-
-    #[cfg(test)]
-    pub fn secret_key(&self) -> SecretKey {
-        self.secret_key
-    }
-
-    #[cfg(test)]
-    pub fn salt(&self) -> Salt {
-        self.salt
-    }
 }
 
 #[cfg(test)]
@@ -243,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_cipher_state_encrypt_key_rotate() {
-        let (mut cipher, key, salt) = cipher_state_setup();
+        let (mut cipher, _, _) = cipher_state_setup();
 
         let plain_text = b"hello, friends";
 

@@ -106,14 +106,14 @@ fn initiator_setup() -> brontide::Brontide {
         Ok(key)
     };
 
-    let act_one = initiator.gen_act_one();
+    initiator.gen_act_one().unwrap();
 
     let mut act_two = [0_u8; 50];
     act_two.copy_from_slice(&hex::decode("0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730ae").unwrap());
 
-    let result = initiator.recv_act_two(act_two);
+    initiator.recv_act_two(act_two).unwrap();
 
-    let act_three = initiator.gen_act_three();
+    initiator.gen_act_three().unwrap();
 
     initiator
 }
@@ -136,14 +136,14 @@ fn responder_setup() -> brontide::Brontide {
     let mut act_one = [0_u8; 50];
     act_one.copy_from_slice(&hex::decode("00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a").unwrap());
 
-    let result = responder.recv_act_one(act_one);
+    responder.recv_act_one(act_one).unwrap();
 
-    let act_two = responder.gen_act_two();
+    responder.gen_act_two().unwrap();
 
     let mut act_three = [0_u8; 66];
     act_three.copy_from_slice(&hex::decode("00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba").unwrap());
 
-    let result = responder.recv_act_three(act_three);
+    responder.recv_act_three(act_three).unwrap();
 
     responder
 }
@@ -153,10 +153,10 @@ fn test_encryption_and_key_rotation() {
     let mut initiator = initiator_setup();
     let mut responder = responder_setup();
 
-    let HELLO = b"hello";
+    let hello = b"hello";
 
     for x in 0..1001 {
-        let packet = initiator.write(HELLO.to_vec()).unwrap();
+        let packet = initiator.write(hello.to_vec()).unwrap();
 
         match x {
             0 => assert_eq!(
@@ -188,6 +188,6 @@ fn test_encryption_and_key_rotation() {
 
         let message = responder.read(&packet).unwrap();
 
-        assert_eq!(hex::encode(message), hex::encode(HELLO));
+        assert_eq!(hex::encode(message), hex::encode(hello));
     }
 }
