@@ -305,7 +305,7 @@ impl Brontide {
         let tag = self
             .send_cipher
             .as_mut()
-            .ok_or(Error::NoCipher("send cipher not initalized".to_owned()))?
+            .ok_or_else(|| Error::NoCipher("send cipher not initalized".to_owned()))?
             .encrypt(&data, &[], &mut cipher_text)?;
 
         //Write the encrypted data, and the second tag.
@@ -323,7 +323,7 @@ impl Brontide {
         let result = self
             .receive_cipher
             .as_mut()
-            .ok_or(Error::NoCipher("receive cipher not initalized".to_owned()))?
+            .ok_or_else(|| Error::NoCipher("receive cipher not initalized".to_owned()))?
             .decrypt(&len, tag1, &[], &mut plain_text);
 
         let mut length: u16 = 0;
