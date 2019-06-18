@@ -326,33 +326,32 @@ impl Brontide {
             .ok_or_else(|| Error::NoCipher("receive cipher not initalized".to_owned()))?
             .decrypt(&len, tag1, &[], &mut plain_text);
 
-        let mut length: u16 = 0;
+        let length: u16;
         let mut length_bytes = [0; 2];
 
         if result {
             length_bytes.copy_from_slice(&plain_text);
             length = u16::from_be_bytes(length_bytes);
         } else {
-            //throw error
+            return Err(Error::BadTag("packet header: bad tag".to_owned()));
         };
 
         let mut message = Vec::with_capacity(length as usize);
 
         if packet.len() != 16 + length as usize + 18 {
-            //Throw error
-            println!("bad size");
+            return Err(Error::PacketBadSize("Packet not correct size".to_owned()));
         };
 
         let encrypted_message = &packet[18..18 + length as usize];
         let tag2 = Tag::from(&packet[18 + length as usize..]);
 
-        if !self.receive_cipher.as_mut().unwrap().decrypt(
-            encrypted_message,
-            tag2,
-            &[],
-            &mut message,
-        ) {
-            //Throw error in here.
+        if !self
+            .receive_cipher
+            .as_mut()
+            .ok_or_else(|| Error::NoCipher("receive cipher not initalized".to_owned()))?
+            .decrypt(encrypted_message, tag2, &[], &mut message)
+        {
+            return Err(Error::BadTag("packet message: bad tag".to_owned()));
         };
 
         Ok(message)

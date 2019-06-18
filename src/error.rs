@@ -14,6 +14,8 @@ pub enum Error {
     BadTag(String),
     DataTooLarge(String),
     NoCipher(String),
+    //TODO build more packet errors
+    PacketBadSize(String),
 }
 
 impl From<std::io::Error> for Error {
@@ -45,6 +47,7 @@ impl fmt::Display for Error {
             Error::BadTag(ref e) => write!(f, "Bad Tag error: {}", e),
             Error::DataTooLarge(ref e) => write!(f, "Data too large error: {}", e),
             Error::NoCipher(ref e) => write!(f, "No Cipher: {}", e),
+            Error::PacketBadSize(ref e) => write!(f, "Packet Bad Size: {}", e),
         }
     }
 }
