@@ -1,4 +1,4 @@
-use crate::acts::{ActOne, ActTwo};
+use crate::acts::{ActOne, ActThree, ActTwo};
 use crate::cipher_state::CipherState;
 use crate::common::{PROLOGUE, VERSION};
 use crate::error::Error;
@@ -191,8 +191,7 @@ impl Brontide {
         Ok(())
     }
 
-    //TODO custom act three type
-    pub fn gen_act_three(&mut self) -> Result<[u8; 66]> {
+    pub fn gen_act_three(&mut self) -> Result<ActThree> {
         let our_pub_key = get_public_key(self.handshake_state.local_static)?;
 
         //TODO let's get this number harded in ActThree.ct size?
@@ -216,29 +215,24 @@ impl Brontide {
             .symmetric
             .encrypt_hash(&[], &mut cipher_text)?;
 
-        let mut act_three = [0_u8; 66];
-        act_three[0] = VERSION;
-        act_three[1..34].copy_from_slice(&ct);
-        act_three[34..50].copy_from_slice(&tag_1);
-        act_three[50..].copy_from_slice(&tag_2);
+        let act_three = ActThree::new(VERSION, ct, tag_1, tag_2);
 
         self.split();
 
         Ok(act_three)
     }
 
-    //Code smell on our errors here -> They are in different order than the above functions.
-    //TODO double check on that.
-    pub fn recv_act_three(&mut self, act_three: [u8; 66]) -> Result<()> {
-        if act_three[0] != VERSION {
+    pub fn recv_act_three(&mut self, act_three_bytes: [u8; 66]) -> Result<()> {
+        let act_three = ActThree::from(act_three_bytes);
+
+        if act_three.version() != VERSION {
             return Err(Error::Version("Act three: bad version.".to_owned()));
         }
 
-        let s1 = &act_three[1..34];
-        let p1 = Tag::from(&act_three[34..50]);
-        //TODO
-        // let s2 = &act_three[50..50];
-        let p2 = Tag::from(&act_three[50..]);
+        let s1 = act_three.key();
+        let p1 = act_three.tag();
+        let s2: &[u8] = &[];
+        let p2 = act_three.tag_two();
 
         let mut plain_text = Vec::with_capacity(s1.len());
 
@@ -246,7 +240,7 @@ impl Brontide {
         if !self
             .handshake_state
             .symmetric
-            .decrypt_hash(s1, p1, &mut plain_text)
+            .decrypt_hash(&s1, p1, &mut plain_text)
         {
             return Err(Error::BadTag("Act three: bad tag.".to_owned()));
         }
@@ -272,7 +266,7 @@ impl Brontide {
         if !self
             .handshake_state
             .symmetric
-            .decrypt_hash(&[], p2, &mut plain_text)
+            .decrypt_hash(s2, p2, &mut plain_text)
         {
             return Err(Error::BadTag("Act three: bad tag.".to_owned()));
         }

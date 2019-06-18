@@ -4,3 +4,5 @@ pub const PROLOGUE: &str = "hns";
 pub const VERSION: u8 = 0;
 
 pub const ACT_ONE_SIZE: usize = 50;
+pub const ACT_TWO_SIZE: usize = 50;
+pub const ACT_THREE_SIZE: usize = 66;
