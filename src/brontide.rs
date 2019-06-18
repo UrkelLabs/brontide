@@ -1,4 +1,4 @@
-use crate::acts::ActOne;
+use crate::acts::{ActOne, ActTwo};
 use crate::cipher_state::CipherState;
 use crate::common::{PROLOGUE, VERSION};
 use crate::error::Error;
@@ -125,8 +125,7 @@ impl Brontide {
         Ok(())
     }
 
-    //TODO custom type return
-    pub fn gen_act_two(&mut self) -> Result<[u8; 50]> {
+    pub fn gen_act_two(&mut self) -> Result<ActTwo> {
         // e
         self.handshake_state.local_ephemeral = (self.handshake_state.generate_key)()?;
 
@@ -146,22 +145,20 @@ impl Brontide {
             .symmetric
             .encrypt_hash(&[], &mut cipher_text)?;
 
-        let mut act_two = [0_u8; 50];
-        act_two[0] = VERSION;
-        act_two[1..34].copy_from_slice(&ephemeral);
-        act_two[34..].copy_from_slice(&tag);
+        let act_two = ActTwo::new(VERSION, ephemeral, tag);
 
         Ok(act_two)
     }
 
-    pub fn recv_act_two(&mut self, act_two: [u8; 50]) -> Result<()> {
-        if act_two[0] != VERSION {
+    pub fn recv_act_two(&mut self, act_two_bytes: [u8; 50]) -> Result<()> {
+        let act_two = ActTwo::from(act_two_bytes);
+
+        if act_two.version() != VERSION {
             return Err(Error::Version("Act two: bad version.".to_owned()));
         }
 
-        let mut e = [0; 33];
-        e.copy_from_slice(&act_two[1..34]);
-        let p = Tag::from(&act_two[34..]);
+        let e = act_two.key();
+        let p = act_two.tag();
 
         let result = secp256k1::PublicKey::from_slice(&e);
 
@@ -170,7 +167,7 @@ impl Brontide {
         }
 
         //e
-        self.handshake_state.remote_ephemeral = PublicKey::from(e);
+        self.handshake_state.remote_ephemeral = e;
         self.handshake_state
             .symmetric
             .mix_digest(&self.handshake_state.remote_ephemeral, None);

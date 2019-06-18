@@ -4,8 +4,6 @@ use std::ops;
 
 pub struct ActOne([u8; ACT_ONE_SIZE]);
 
-impl ActOne {}
-
 impl From<[u8; ACT_ONE_SIZE]> for ActOne {
     fn from(array: [u8; ACT_ONE_SIZE]) -> Self {
         ActOne(array)
@@ -57,3 +55,6 @@ impl ops::Deref for ActOne {
         &self.0
     }
 }
+
+//ActOne and ActTwo are of the act same structure, so we can just reimplement by type here.
+pub type ActTwo = ActOne;
