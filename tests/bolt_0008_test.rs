@@ -186,7 +186,7 @@ fn test_encryption_and_key_rotation() {
             _ => {}
         }
 
-        let message = responder.read(&packet);
+        let message = responder.read(&packet).unwrap();
 
         assert_eq!(hex::encode(message), hex::encode(HELLO));
     }

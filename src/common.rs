@@ -6,3 +6,6 @@ pub const VERSION: u8 = 0;
 pub const ACT_ONE_SIZE: usize = 50;
 pub const ACT_TWO_SIZE: usize = 50;
 pub const ACT_THREE_SIZE: usize = 66;
+
+pub const PACKET_LENGTH_SIZE: usize = 2;
+pub const TAG_SIZE: usize = 16;

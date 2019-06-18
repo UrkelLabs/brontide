@@ -1,6 +1,6 @@
 use crate::acts::{ActOne, ActThree, ActTwo};
 use crate::cipher_state::CipherState;
-use crate::common::{PROLOGUE, VERSION};
+use crate::common::{PACKET_LENGTH_SIZE, PROLOGUE, TAG_SIZE, VERSION};
 use crate::error::Error;
 use crate::handshake::HandshakeState;
 use crate::types::{PublicKey, SecretKey, Tag};
@@ -276,6 +276,7 @@ impl Brontide {
         Ok(())
     }
 
+    //TODO think about making a packet a struct and impl these on it
     pub fn write(&mut self, data: Vec<u8>) -> Result<Vec<u8>> {
         let length = data.len();
 
@@ -283,57 +284,47 @@ impl Brontide {
             return Err(Error::DataTooLarge("Data length too big".to_owned()));
         }
 
-        //TODO convert these numbers to constants
-        let mut packet = Vec::with_capacity(2 + 16 + data.len() + 16);
+        let mut packet = Vec::with_capacity(PACKET_LENGTH_SIZE + TAG_SIZE + data.len() + TAG_SIZE);
 
         let length_shortened = length as u16;
-
-        //TODO constants here are probably the way to go. - no magic numbers aka 2.
-        let mut length_buffer = [0; 2];
+        let mut length_buffer = [0; PACKET_LENGTH_SIZE];
         length_buffer.copy_from_slice(&length_shortened.to_be_bytes());
 
-        //TODO not sure this is the correct capacity.
-        let mut cipher_text = Vec::with_capacity(2);
-        //TODO we should probably make ciphers as non-options since they need to hold state.
-        let tag = self
-            .send_cipher
-            .as_mut()
-            .unwrap()
-            //TODO catch error here, don't unwrap
-            // .encrypt(&length.to_be_bytes(), &[], &mut cipher_text)
-            .encrypt(&length_buffer, &[], &mut cipher_text)?;
+        let mut cipher_text = Vec::with_capacity(PACKET_LENGTH_SIZE);
+        let tag =
+            self.send_cipher
+                .as_mut()
+                .unwrap()
+                .encrypt(&length_buffer, &[], &mut cipher_text)?;
 
+        //Write the encrypted data length, and the first tag.
         packet.append(&mut cipher_text);
-
-        //Write the first tag
         packet.append(&mut tag.to_vec());
 
         let mut cipher_text = Vec::with_capacity(length);
         let tag = self
             .send_cipher
             .as_mut()
-            .unwrap()
+            .ok_or(Error::NoCipher("send cipher not initalized".to_owned()))?
             .encrypt(&data, &[], &mut cipher_text)?;
 
+        //Write the encrypted data, and the second tag.
         packet.append(&mut cipher_text);
-
         packet.append(&mut tag.to_vec());
 
         Ok(packet)
     }
 
-    //TODO return result
-    pub fn read(&mut self, packet: &[u8]) -> Vec<u8> {
+    pub fn read(&mut self, packet: &[u8]) -> Result<Vec<u8>> {
         let len = &packet[..2];
         let tag1 = Tag::from(&packet[2..18]);
 
-        let mut plain_text = Vec::with_capacity(2);
-        //TODO rewrite this.
-        let result =
-            self.receive_cipher
-                .as_mut()
-                .unwrap()
-                .decrypt(&len, tag1, &[], &mut plain_text);
+        let mut plain_text = Vec::with_capacity(PACKET_LENGTH_SIZE);
+        let result = self
+            .receive_cipher
+            .as_mut()
+            .ok_or(Error::NoCipher("receive cipher not initalized".to_owned()))?
+            .decrypt(&len, tag1, &[], &mut plain_text);
 
         let mut length: u16 = 0;
         let mut length_bytes = [0; 2];
@@ -364,7 +355,7 @@ impl Brontide {
             //Throw error in here.
         };
 
-        message
+        Ok(message)
     }
 
     //TODO review thoroughly AND TEST

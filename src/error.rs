@@ -13,6 +13,7 @@ pub enum Error {
     BadKey(String),
     BadTag(String),
     DataTooLarge(String),
+    NoCipher(String),
 }
 
 impl From<std::io::Error> for Error {
@@ -43,6 +44,7 @@ impl fmt::Display for Error {
             Error::BadKey(ref e) => write!(f, "Bad Key error: {}", e),
             Error::BadTag(ref e) => write!(f, "Bad Tag error: {}", e),
             Error::DataTooLarge(ref e) => write!(f, "Data too large error: {}", e),
+            Error::NoCipher(ref e) => write!(f, "No Cipher: {}", e),
         }
     }
 }
