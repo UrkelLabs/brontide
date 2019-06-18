@@ -1,3 +1,4 @@
+use crate::acts::ActOne;
 use crate::cipher_state::CipherState;
 use crate::common::{PROLOGUE, VERSION};
 use crate::error::Error;
@@ -15,6 +16,8 @@ pub struct Brontide {
     receive_cipher: Option<CipherState>,
 }
 
+//Consider if we want to do this or not, might just require secret keys and pub keys to be passed
+//in.
 impl Brontide {
     pub fn new<L, R>(
         initiator: bool,
@@ -56,8 +59,7 @@ impl Brontide {
         }
     }
 
-    //TODO replace with ACT_ONE Custom type.
-    pub fn gen_act_one(&mut self) -> Result<[u8; 50]> {
+    pub fn gen_act_one(&mut self) -> Result<ActOne> {
         // e
         self.handshake_state.local_ephemeral = (self.handshake_state.generate_key)()?;
         let ephemeral = get_public_key(self.handshake_state.local_ephemeral)?;
@@ -76,32 +78,30 @@ impl Brontide {
             .symmetric
             .encrypt_hash(&[], &mut cipher_text)?;
 
-        let mut act_one = [0_u8; 50];
-        act_one[0] = VERSION;
-        act_one[1..34].copy_from_slice(&ephemeral);
-        act_one[34..].copy_from_slice(&tag);
+        let act_one = ActOne::new(VERSION, ephemeral, tag);
 
         Ok(act_one)
     }
 
-    pub fn recv_act_one(&mut self, act_one: [u8; 50]) -> Result<()> {
-        if act_one[0] != VERSION {
+    pub fn recv_act_one(&mut self, act_one_bytes: [u8; 50]) -> Result<()> {
+        let act_one = ActOne::from(act_one_bytes);
+
+        if act_one.version() != VERSION {
             return Err(Error::Version("Act one: bad version.".to_owned()));
         }
 
-        let e = &act_one[1..34];
-        //TODO actually, Act_One.tag() should return this
-        let p = Tag::from(&act_one[34..]);
+        let e = act_one.key();
+        let p = act_one.tag();
         //We just want to verify here, might be an easier way than creating the actual key.
         //TODO
-        let result = secp256k1::PublicKey::from_slice(e);
+        let result = secp256k1::PublicKey::from_slice(&e);
 
         if result.is_err() {
             return Err(Error::BadKey("Act one: bad key.".to_owned()));
         }
 
         //e
-        self.handshake_state.remote_ephemeral = PublicKey::from(e);
+        self.handshake_state.remote_ephemeral = e;
         self.handshake_state
             .symmetric
             .mix_digest(&self.handshake_state.remote_ephemeral, None);
