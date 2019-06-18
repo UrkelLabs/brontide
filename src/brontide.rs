@@ -357,10 +357,7 @@ impl Brontide {
         Ok(message)
     }
 
-    //TODO review thoroughly AND TEST
-    //TODO I don't think this should be public
-    pub fn split(&mut self) {
-        //TODO must be buffer empty not new
+    fn split(&mut self) {
         let (h1, h2) = expand(&[], &self.handshake_state.symmetric.chaining_key);
 
         if self.handshake_state.initiator {
