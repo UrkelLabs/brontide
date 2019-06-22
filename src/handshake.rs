@@ -14,7 +14,7 @@ pub struct HandshakeState {
     pub(crate) local_ephemeral: SecretKey,
     pub(crate) remote_static: PublicKey,
     pub(crate) remote_ephemeral: PublicKey,
-    pub generate_key: fn() -> Result<SecretKey>,
+    pub(crate) generate_key: fn() -> Result<SecretKey>,
 }
 
 impl HandshakeState {
