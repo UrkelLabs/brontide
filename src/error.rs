@@ -16,7 +16,7 @@ pub enum Error {
     NoCipher(String),
     //TODO build more packet errors
     PacketBadSize(String),
-    StreamNotReady,
+    HandshakeNotComplete,
 }
 
 impl From<std::io::Error> for Error {
@@ -49,7 +49,7 @@ impl fmt::Display for Error {
             Error::DataTooLarge(ref e) => write!(f, "Data too large error: {}", e),
             Error::NoCipher(ref e) => write!(f, "No Cipher: {}", e),
             Error::PacketBadSize(ref e) => write!(f, "Packet Bad Size: {}", e),
-            Error::StreamNotReady => write!(f, "Brontide Stream not ready"),
+            Error::HandshakeNotComplete => write!(f, "Brontide Handshake not complete"),
         }
     }
 }
