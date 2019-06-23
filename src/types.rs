@@ -1,6 +1,49 @@
 use hex;
 use std::{fmt, ops, str::FromStr};
 
+#[derive(Debug, Copy, Clone)]
+pub enum PacketSize {
+    U16,
+    U32,
+}
+
+/// The number of bytes used to prefix encode the length of a message payload.
+/// Can be either 2 bytes (u16) - LND - or 4 bytes (u32) - Handshake
+impl PacketSize {
+    pub fn max(self) -> usize {
+        match self {
+            PacketSize::U16 => std::u16::MAX as usize,
+            PacketSize::U32 => std::u32::MAX as usize,
+        }
+    }
+
+    pub fn size(self) -> usize {
+        match self {
+            PacketSize::U16 => 2,
+            PacketSize::U32 => 4,
+        }
+    }
+
+    ///Returns the length as big endian bytes depending on the packet size.
+    pub fn length_buffer(self, length: usize) -> Vec<u8> {
+        match self {
+            PacketSize::U16 => {
+                let length_shortened = length as u16;
+                //This might be unneccesary sp?
+                let mut buffer = [0; 2];
+                buffer.copy_from_slice(&length_shortened.to_be_bytes());
+                buffer.to_vec()
+            }
+            PacketSize::U32 => {
+                let length_shortened = length as u32;
+                let mut buffer = [0; 4];
+                buffer.copy_from_slice(&length_shortened.to_be_bytes());
+                buffer.to_vec()
+            }
+        }
+    }
+}
+
 //TODO only public types inside of this file.
 //I take this back possibly>
 //Implement debug
@@ -25,6 +68,8 @@ impl Default for SecretKey {
     }
 }
 
+//This should probably be removed as it could possibly fail.
+//TODO likewise
 impl From<&[u8]> for SecretKey {
     fn from(slice: &[u8]) -> Self {
         let mut array = [0; 32];
