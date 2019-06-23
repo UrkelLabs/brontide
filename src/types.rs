@@ -1,11 +1,22 @@
 use hex;
 use std::{fmt, ops, str::FromStr};
 
+#[derive(Eq, PartialEq, Copy, Clone)]
+pub enum ActState {
+    None,
+    One,
+    Two,
+    Done,
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum PacketSize {
     U16,
     U32,
 }
+
+//TODO the &[u8]'s should be converted to TryFrom not From. The error should then be Invalid Secret
+//Key/ Invalid Public Key;
 
 /// The number of bytes used to prefix encode the length of a message payload.
 /// Can be either 2 bytes (u16) - LND - or 4 bytes (u32) - Handshake
@@ -39,6 +50,25 @@ impl PacketSize {
                 let mut buffer = [0; 4];
                 buffer.copy_from_slice(&length_shortened.to_be_bytes());
                 buffer.to_vec()
+            }
+        }
+    }
+
+    pub fn length(self, length_buffer: &[u8]) -> usize {
+        match self {
+            PacketSize::U16 => {
+                let length: u16;
+                let mut length_bytes = [0; 2];
+                length_bytes.copy_from_slice(length_buffer);
+                length = u16::from_be_bytes(length_bytes);
+                length as usize
+            }
+            PacketSize::U32 => {
+                let length: u32;
+                let mut length_bytes = [0; 4];
+                length_bytes.copy_from_slice(length_buffer);
+                length = u32::from_be_bytes(length_bytes);
+                length as usize
             }
         }
     }
