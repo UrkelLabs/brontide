@@ -14,6 +14,8 @@ pub mod types;
 pub mod util;
 
 pub use crate::brontide::Brontide;
+pub use crate::brontide::BrontideBuilder;
+pub use crate::types::PacketSize;
 pub use crate::types::PublicKey;
 pub use crate::types::SecretKey;
 
