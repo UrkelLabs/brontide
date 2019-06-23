@@ -1,48 +1,114 @@
 use crate::acts::{ActOne, ActThree, ActTwo};
 use crate::cipher_state::CipherState;
-use crate::common::{PACKET_LENGTH_SIZE, PROLOGUE, TAG_SIZE, VERSION};
+use crate::common::{PROLOGUE, TAG_SIZE, VERSION};
 use crate::error::Error;
 use crate::handshake::HandshakeState;
-use crate::types::{PublicKey, SecretKey, Tag};
+use crate::types::{PacketSize, PublicKey, SecretKey, Tag};
 use crate::util::{ecdh, expand, get_public_key};
 use crate::Result;
 
 use secp256k1;
 
 pub struct Brontide {
-    //TODO this needs to be public *ONLY* to tests
-    pub handshake_state: HandshakeState,
+    handshake_state: HandshakeState,
     send_cipher: Option<CipherState>,
     receive_cipher: Option<CipherState>,
+    packet_size: PacketSize,
 }
 
-//Consider if we want to do this or not, might just require secret keys and pub keys to be passed
-//in.
+pub struct BrontideBuilder {
+    initiator: bool,
+    local_secret: SecretKey,
+    remote_public: Option<PublicKey>,
+    prologue: Option<String>,
+    packet_size: PacketSize,
+    gen_key_func: Option<fn() -> Result<SecretKey>>,
+}
+
+impl BrontideBuilder {
+    pub fn new<T: Into<SecretKey>>(local_secret: T) -> Self {
+        BrontideBuilder {
+            initiator: false,
+            local_secret: local_secret.into(),
+            //Probably declare Defaults for these down below.
+            remote_public: None,
+            prologue: None,
+            //Packet size defaults to u32 which is what Handshake needs
+            //put this into default
+            packet_size: PacketSize::U32,
+            gen_key_func: None,
+        }
+    }
+
+    pub fn with_remote_public<T: Into<PublicKey>>(mut self, remote_public: T) -> Self {
+        self.remote_public = Some(remote_public.into());
+        self
+    }
+
+    pub fn with_prologue(mut self, prologue: &str) -> Self {
+        self.prologue = Some(prologue.to_owned());
+        self
+    }
+
+    pub fn with_packet_size(mut self, size: PacketSize) -> Self {
+        self.packet_size = size;
+        self
+    }
+
+    pub fn with_generate_key(mut self, gen_key_func: fn() -> Result<SecretKey>) -> Self {
+        self.gen_key_func = Some(gen_key_func);
+        self
+    }
+
+    pub fn initiator(mut self) -> Self {
+        self.initiator = true;
+        self
+    }
+
+    pub fn responder(mut self) -> Self {
+        self.initiator = false;
+        self
+    }
+
+    pub fn build(self) -> Brontide {
+        let mut brontide = Brontide::new(
+            self.initiator,
+            self.local_secret,
+            self.remote_public,
+            self.prologue,
+            self.packet_size,
+        );
+
+        if self.gen_key_func.is_some() {
+            brontide.handshake_state.generate_key = self.gen_key_func.unwrap();
+        };
+
+        brontide
+    }
+}
+
 impl Brontide {
-    pub fn new<L, R>(
+    pub fn new(
         initiator: bool,
-        local_pub: L,
-        remote_pub: Option<R>,
-        prologue: Option<&str>,
-    ) -> Self
-    where
-        L: Into<SecretKey>,
-        R: Into<PublicKey>,
-    {
+        local_pub: SecretKey,
+        remote_pub: Option<PublicKey>,
+        prologue: Option<String>,
+        packet_size: PacketSize,
+    ) -> Self {
         //I think Prologue needs to be an option here actually.
         //Copy the loop below this instead.
-        let brontide_prologue: &str;
+        let brontide_prologue: String;
         if prologue.is_some() {
             brontide_prologue = prologue.unwrap();
         } else {
-            brontide_prologue = PROLOGUE;
+            brontide_prologue = PROLOGUE.to_owned();
         };
         //TODO rename local pub
 
         let remote_pub_key: Option<PublicKey>;
 
         if let Some(key) = remote_pub {
-            remote_pub_key = Some(key.into());
+            remote_pub_key = Some(key);
         } else {
             remote_pub_key = None;
         }
@@ -50,12 +116,13 @@ impl Brontide {
         Brontide {
             handshake_state: HandshakeState::new(
                 initiator,
-                brontide_prologue,
-                local_pub.into(),
+                &brontide_prologue,
+                local_pub,
                 remote_pub_key,
             ),
             send_cipher: None,
             receive_cipher: None,
+            packet_size,
         }
     }
 
@@ -277,20 +344,24 @@ impl Brontide {
     }
 
     //TODO think about making a packet a struct and impl these on it
+    //TODO also make this the write trait
+    //TODO this might be test only as well.
     pub fn write(&mut self, data: Vec<u8>) -> Result<Vec<u8>> {
         let length = data.len();
 
-        if length > std::u16::MAX as usize {
+        let max_length = self.packet_size.max();
+
+        if length > max_length {
             return Err(Error::DataTooLarge("Data length too big".to_owned()));
         }
 
-        let mut packet = Vec::with_capacity(PACKET_LENGTH_SIZE + TAG_SIZE + data.len() + TAG_SIZE);
+        let size = self.packet_size.size();
 
-        let length_shortened = length as u16;
-        let mut length_buffer = [0; PACKET_LENGTH_SIZE];
-        length_buffer.copy_from_slice(&length_shortened.to_be_bytes());
+        let mut packet = Vec::with_capacity(size + TAG_SIZE + data.len() + TAG_SIZE);
 
-        let mut cipher_text = Vec::with_capacity(PACKET_LENGTH_SIZE);
+        let length_buffer = self.packet_size.length_buffer(length);
+
+        let mut cipher_text = Vec::with_capacity(size);
         let tag =
             self.send_cipher
                 .as_mut()
@@ -316,10 +387,11 @@ impl Brontide {
     }
 
     pub fn read(&mut self, packet: &[u8]) -> Result<Vec<u8>> {
-        let len = &packet[..2];
-        let tag1 = Tag::from(&packet[2..18]);
+        let size = self.packet_size.size();
+        let len = &packet[..size];
+        let tag1 = Tag::from(&packet[size..18]);
 
-        let mut plain_text = Vec::with_capacity(PACKET_LENGTH_SIZE);
+        let mut plain_text = Vec::with_capacity(size);
         let result = self
             .receive_cipher
             .as_mut()
