@@ -20,7 +20,7 @@ pub use crate::types::PublicKey;
 pub use crate::types::SecretKey;
 
 #[cfg(feature = "stream")]
-pub use crate::brontide_stream::BrontideStream;
+pub use crate::brontide_stream::{BrontideStream, BrontideStreamBuilder};
 
 pub type Result<T> = std::result::Result<T, error::Error>;
 
