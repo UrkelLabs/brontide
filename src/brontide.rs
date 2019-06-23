@@ -3,7 +3,7 @@ use crate::cipher_state::CipherState;
 use crate::common::{PROLOGUE, TAG_SIZE, VERSION};
 use crate::error::Error;
 use crate::handshake::HandshakeState;
-use crate::types::{PacketSize, PublicKey, SecretKey, Tag};
+use crate::types::{ActState, PacketSize, PublicKey, SecretKey, Tag};
 use crate::util::{ecdh, expand, get_public_key};
 use crate::Result;
 
@@ -14,6 +14,7 @@ pub struct Brontide {
     send_cipher: Option<CipherState>,
     receive_cipher: Option<CipherState>,
     packet_size: PacketSize,
+    state: ActState,
 }
 
 pub struct BrontideBuilder {
@@ -88,6 +89,7 @@ impl BrontideBuilder {
 }
 
 impl Brontide {
+    //TODO review this, probably can remove some of these options with the builder pattern.
     pub fn new(
         initiator: bool,
         local_pub: SecretKey,
@@ -123,6 +125,7 @@ impl Brontide {
             send_cipher: None,
             receive_cipher: None,
             packet_size,
+            state: ActState::None,
         }
     }
 
@@ -146,6 +149,9 @@ impl Brontide {
             .encrypt_hash(&[], &mut cipher_text)?;
 
         let act_one = ActOne::new(VERSION, ephemeral, tag);
+
+        //Set internal state to act one.
+        self.state = ActState::One;
 
         Ok(act_one)
     }
@@ -189,6 +195,9 @@ impl Brontide {
             return Err(Error::BadTag("Act one: bad tag".to_owned()));
         }
 
+        //Set internal state to act one.
+        self.state = ActState::One;
+
         Ok(())
     }
 
@@ -213,6 +222,9 @@ impl Brontide {
             .encrypt_hash(&[], &mut cipher_text)?;
 
         let act_two = ActTwo::new(VERSION, ephemeral, tag);
+
+        //Set internal state to act two.
+        self.state = ActState::Two;
 
         Ok(act_two)
     }
@@ -255,6 +267,9 @@ impl Brontide {
             return Err(Error::BadTag("Act two: bad tag.".to_owned()));
         }
 
+        //Set internal state to act two.
+        self.state = ActState::Two;
+
         Ok(())
     }
 
@@ -285,6 +300,9 @@ impl Brontide {
         let act_three = ActThree::new(VERSION, ct, tag_1, tag_2);
 
         self.split();
+
+        //Set internal state to done.
+        self.state = ActState::Done;
 
         Ok(act_three)
     }
@@ -340,19 +358,26 @@ impl Brontide {
 
         self.split();
 
+        //Set internal state to done.
+        self.state = ActState::Done;
+
         Ok(())
     }
 
-    //TODO think about making a packet a struct and impl these on it
-    //TODO also make this the write trait
-    //TODO this might be test only as well.
     pub fn write(&mut self, data: Vec<u8>) -> Result<Vec<u8>> {
+        if self.state != ActState::Done {
+            return Err(Error::HandshakeNotComplete);
+        }
+
         let length = data.len();
 
         let max_length = self.packet_size.max();
 
         if length > max_length {
-            return Err(Error::DataTooLarge("Data length too big".to_owned()));
+            return Err(Error::DataTooLarge(format!(
+                "Tried to write: {}. Max allow: {}",
+                length, max_length
+            )));
         }
 
         let size = self.packet_size.size();
@@ -362,11 +387,11 @@ impl Brontide {
         let length_buffer = self.packet_size.length_buffer(length);
 
         let mut cipher_text = Vec::with_capacity(size);
-        let tag =
-            self.send_cipher
-                .as_mut()
-                .unwrap()
-                .encrypt(&length_buffer, &[], &mut cipher_text)?;
+        let tag = self
+            .send_cipher
+            .as_mut()
+            .ok_or_else(|| Error::NoCipher("send cipher not initalized".to_owned()))?
+            .encrypt(&length_buffer, &[], &mut cipher_text)?;
 
         //Write the encrypted data length, and the first tag.
         packet.append(&mut cipher_text);
@@ -387,8 +412,12 @@ impl Brontide {
     }
 
     pub fn read(&mut self, packet: &[u8]) -> Result<Vec<u8>> {
+        if self.state != ActState::Done {
+            return Err(Error::HandshakeNotComplete);
+        }
+
         let size = self.packet_size.size();
-        let len = &packet[..size];
+        let length = &packet[..size];
         let tag1 = Tag::from(&packet[size..18]);
 
         let mut plain_text = Vec::with_capacity(size);
@@ -396,26 +425,28 @@ impl Brontide {
             .receive_cipher
             .as_mut()
             .ok_or_else(|| Error::NoCipher("receive cipher not initalized".to_owned()))?
-            .decrypt(&len, tag1, &[], &mut plain_text);
+            .decrypt(&length, tag1, &[], &mut plain_text);
 
-        let length: u16;
-        let mut length_bytes = [0; 2];
+        let length: usize;
 
         if result {
-            length_bytes.copy_from_slice(&plain_text);
-            length = u16::from_be_bytes(length_bytes);
+            length = self.packet_size.length(&plain_text);
         } else {
             return Err(Error::BadTag("packet header: bad tag".to_owned()));
         };
 
-        let mut message = Vec::with_capacity(length as usize);
+        let mut message = Vec::with_capacity(length);
 
-        if packet.len() != 16 + length as usize + 18 {
-            return Err(Error::PacketBadSize("Packet not correct size".to_owned()));
+        if packet.len() != 16 + length + 18 {
+            return Err(Error::PacketBadSize(format!(
+                "Expected: {}, Found: {}",
+                16 + length + 18,
+                packet.len()
+            )));
         };
 
-        let encrypted_message = &packet[18..18 + length as usize];
-        let tag2 = Tag::from(&packet[18 + length as usize..]);
+        let encrypted_message = &packet[18..18 + length];
+        let tag2 = Tag::from(&packet[18 + length..]);
 
         if !self
             .receive_cipher
@@ -459,5 +490,9 @@ impl Brontide {
 
     pub fn initiator(&self) -> bool {
         self.handshake_state.initiator
+    }
+
+    pub fn act_state(&self) -> ActState {
+        self.state
     }
 }
