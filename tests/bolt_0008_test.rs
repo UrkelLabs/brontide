@@ -17,14 +17,20 @@ fn test_initiator_successful_handshake() {
         &hex::decode("1111111111111111111111111111111111111111111111111111111111111111").unwrap(),
     );
 
-    let mut initiator = brontide::Brontide::new(true, ls_priv, Some(rs_pub), Some(PROLOGUE));
-
-    initiator.handshake_state.generate_key = || {
+    let gen_key = || {
         let key = brontide::SecretKey::from_str(
             "1212121212121212121212121212121212121212121212121212121212121212",
         )?;
         Ok(key)
     };
+
+    let mut initiator = brontide::BrontideBuilder::new(ls_priv)
+        .with_remote_public(rs_pub)
+        .with_prologue(PROLOGUE)
+        .with_packet_size(brontide::PacketSize::U16)
+        .with_generate_key(gen_key)
+        .initiator()
+        .build();
 
     let act_one = initiator.gen_act_one().unwrap();
 
@@ -57,14 +63,19 @@ fn test_responder_successful_handshake() {
         &hex::decode("2121212121212121212121212121212121212121212121212121212121212121").unwrap(),
     );
 
-    let mut responder = brontide::Brontide::new(false, ls_priv, None::<&[u8]>, Some(PROLOGUE));
-
-    responder.handshake_state.generate_key = || {
+    let gen_key = || {
         let key = brontide::SecretKey::from_str(
             "2222222222222222222222222222222222222222222222222222222222222222",
         )?;
         Ok(key)
     };
+
+    let mut responder = brontide::BrontideBuilder::new(ls_priv)
+        .with_prologue(PROLOGUE)
+        .with_packet_size(brontide::PacketSize::U16)
+        .with_generate_key(gen_key)
+        .responder()
+        .build();
 
     let mut act_one = [0_u8; 50];
     act_one.copy_from_slice(&hex::decode("00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a").unwrap());
@@ -97,14 +108,20 @@ fn initiator_setup() -> brontide::Brontide {
         &hex::decode("1111111111111111111111111111111111111111111111111111111111111111").unwrap(),
     );
 
-    let mut initiator = brontide::Brontide::new(true, ls_priv, Some(rs_pub), Some(PROLOGUE));
-
-    initiator.handshake_state.generate_key = || {
+    let gen_key = || {
         let key = brontide::SecretKey::from_str(
             "1212121212121212121212121212121212121212121212121212121212121212",
         )?;
         Ok(key)
     };
+
+    let mut initiator = brontide::BrontideBuilder::new(ls_priv)
+        .with_remote_public(rs_pub)
+        .with_prologue(PROLOGUE)
+        .with_packet_size(brontide::PacketSize::U16)
+        .with_generate_key(gen_key)
+        .initiator()
+        .build();
 
     initiator.gen_act_one().unwrap();
 
@@ -124,14 +141,19 @@ fn responder_setup() -> brontide::Brontide {
         &hex::decode("2121212121212121212121212121212121212121212121212121212121212121").unwrap(),
     );
 
-    let mut responder = brontide::Brontide::new(false, ls_priv, None::<&[u8]>, Some(PROLOGUE));
-
-    responder.handshake_state.generate_key = || {
+    let gen_key = || {
         let key = brontide::SecretKey::from_str(
             "2222222222222222222222222222222222222222222222222222222222222222",
         )?;
         Ok(key)
     };
+
+    let mut responder = brontide::BrontideBuilder::new(ls_priv)
+        .with_prologue(PROLOGUE)
+        .with_packet_size(brontide::PacketSize::U16)
+        .with_generate_key(gen_key)
+        .responder()
+        .build();
 
     let mut act_one = [0_u8; 50];
     act_one.copy_from_slice(&hex::decode("00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a").unwrap());
