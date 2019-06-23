@@ -121,22 +121,32 @@ where
             return Err(Error::HandshakeNotComplete);
         }
 
-        let length = data.len();
-
-        //Need to do same as brontide
-        // if length > std::u16::MAX as usize {
-        // TODO make these errors verbose "Tried to write: , Ma writeable: xxx
-        //     return Err(Error::DataTooLarge("Data length too big".to_owned()));
-        // }
-
-        let len = [0_u8; 4];
-
         let encrypted_packet = self.brontide.write(data)?;
 
         self.socket.write_all(&encrypted_packet).await?;
 
         Ok(())
     }
+
+    //pub async fn read(&mut self, data: Vec<u8>) -> Result<(Vec<u8>)> {
+    //    if self.brontide.act_state() == ActState::None {
+    //        return Err(Error::HandshakeNotComplete);
+    //    }
+
+    //    //TODO not sure if we want to support this -> It's unlikely that someone will attempt to
+    //    //write to a socket before the connection is finished.
+    //    if self.brontide.act_state() != ActState::Done {
+    //        //Push data to buffer for later. TODO
+    //        //self.buffer.extend(data);
+    //        return Err(Error::HandshakeNotComplete);
+    //    }
+
+    //    let encrypted_packet = self.brontide.write(data)?;
+
+    //    self.socket.write_all(&encrypted_packet).await?;
+
+    //    Ok(())
+    //}
 }
 
 impl<T> AsRef<T> for BrontideStream<T>
