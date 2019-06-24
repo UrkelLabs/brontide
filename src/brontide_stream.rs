@@ -1,6 +1,7 @@
 use crate::brontide::Brontide;
+use crate::common::HEADER_SIZE;
 use crate::error::Error;
-use crate::types::{ActState, PacketSize, PublicKey, SecretKey};
+use crate::types::{ActState, PacketSize, PublicKey, SecretKey, Tag};
 use crate::Result;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use futures_timer::FutureExt;
@@ -145,6 +146,50 @@ where
         self.socket.write_all(&encrypted_packet).await?;
 
         Ok(())
+    }
+
+    //TODO be able to include a timeout here -> If we do that, I think we then need to be able to
+    //flush the connection.
+    pub async fn next_message(&mut self) -> Result<Vec<u8>> {
+        let mut header = [0; HEADER_SIZE];
+
+        self.socket.read_exact(&mut header).await?;
+
+        let size = self.brontide.packet_size().size();
+        let len = &header[..size];
+        //This should probably be a tryfrom, so that it throws an error if possible. TODO
+        let tag = Tag::from(&header[size..]);
+
+        let mut plain_text = Vec::with_capacity(size);
+        let result = self
+            .brontide
+            .receive_cipher
+            .as_mut()
+            .ok_or_else(|| Error::NoCipher("receive cipher not initalized".to_owned()))?
+            .decrypt(&len, tag, &[], &mut plain_text);
+
+        let length: usize;
+
+        if result {
+            length = self.brontide.packet_size().length(&plain_text);
+        } else {
+            return Err(Error::BadTag("packet header: bad tag".to_owned()));
+        };
+
+        if length > self.brontide.packet_size().max() {
+            return Err(Error::DataTooLarge(format!(
+                "Tried to write: {}, Max: {}",
+                length,
+                self.brontide.packet_size().max()
+            )));
+        }
+
+        // let mut body = [0; length + 16];
+        let mut body = Vec::with_capacity(length + 16);
+
+        self.socket.read_exact(&mut body).await?;
+
+        Ok(body)
     }
 
     //pub async fn read(&mut self, data: Vec<u8>) -> Result<(Vec<u8>)> {
