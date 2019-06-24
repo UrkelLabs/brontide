@@ -150,15 +150,18 @@ where
 
     //TODO be able to include a timeout here -> If we do that, I think we then need to be able to
     //flush the connection.
+    //TODO should handle EOF, and just continue to loop.
     pub async fn next_message(&mut self) -> Result<Vec<u8>> {
+        //This has to be dynamic based on packet size.
         let mut header = [0; HEADER_SIZE];
 
         self.socket.read_exact(&mut header).await?;
 
         let size = self.brontide.packet_size().size();
         let len = &header[..size];
+
         //This should probably be a tryfrom, so that it throws an error if possible. TODO
-        let tag = Tag::from(&header[size..]);
+        let tag1 = Tag::from(&header[size..]);
 
         let mut plain_text = Vec::with_capacity(size);
         let result = self
@@ -166,7 +169,7 @@ where
             .receive_cipher
             .as_mut()
             .ok_or_else(|| Error::NoCipher("receive cipher not initalized".to_owned()))?
-            .decrypt(&len, tag, &[], &mut plain_text);
+            .decrypt(&len, tag1, &[], &mut plain_text);
 
         let length: usize;
 
@@ -185,11 +188,28 @@ where
         }
 
         // let mut body = [0; length + 16];
-        let mut body = Vec::with_capacity(length + 16);
+        let mut body = vec![0; length + 16];
 
+        //TODO explore using read_to_end here, then our vector will grow for us.
         self.socket.read_exact(&mut body).await?;
 
-        Ok(body)
+        let encrypted_message = &body[..length];
+        //TODO make this a tryfrom, so it throw an error
+        let tag2 = Tag::from(&body[length..]);
+
+        let mut message = Vec::with_capacity(length);
+
+        if !self
+            .brontide
+            .receive_cipher
+            .as_mut()
+            .ok_or_else(|| Error::NoCipher("receive cipher not initalized".to_owned()))?
+            .decrypt(encrypted_message, tag2, &[], &mut message)
+        {
+            return Err(Error::BadTag("packet message: bad tag".to_owned()));
+        };
+
+        Ok(message)
     }
 
     //pub async fn read(&mut self, data: Vec<u8>) -> Result<(Vec<u8>)> {
