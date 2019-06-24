@@ -12,7 +12,7 @@ use secp256k1;
 pub struct Brontide {
     handshake_state: HandshakeState,
     send_cipher: Option<CipherState>,
-    receive_cipher: Option<CipherState>,
+    pub(crate) receive_cipher: Option<CipherState>,
     packet_size: PacketSize,
     state: ActState,
 }
@@ -418,6 +418,8 @@ impl Brontide {
 
         let size = self.packet_size.size();
         let length = &packet[..size];
+        //This needs to not be from a slice, so that it doesn't throw an error.
+        //Actually maybe it does. TODO
         let tag1 = Tag::from(&packet[size..18]);
 
         let mut plain_text = Vec::with_capacity(size);
@@ -494,5 +496,9 @@ impl Brontide {
 
     pub fn act_state(&self) -> ActState {
         self.state
+    }
+
+    pub fn packet_size(&self) -> PacketSize {
+        self.packet_size
     }
 }
