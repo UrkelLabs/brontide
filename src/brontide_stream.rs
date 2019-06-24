@@ -3,7 +3,9 @@ use crate::error::Error;
 use crate::types::{ActState, PacketSize, PublicKey, SecretKey};
 use crate::Result;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use futures_timer::FutureExt;
 use std::marker::Unpin;
+use std::time::Duration;
 
 pub struct BrontideStreamBuilder<T>
 where
@@ -80,28 +82,45 @@ impl<T> BrontideStream<T>
 where
     T: AsyncRead + AsyncWrite + AsyncReadExt + AsyncReadExt + Unpin,
 {
-    //TODO need to implement timeouts here. See: https://docs.rs/futures-timer/0.2.1/futures_timer/
     pub async fn start(&mut self) -> Result<()> {
         if self.brontide.initiator() {
             let act_one = self.brontide.gen_act_one()?;
-            self.socket.write_all(&act_one).await?;
+            self.socket
+                .write_all(&act_one)
+                .timeout(Duration::from_secs(1))
+                .await?;
 
             let mut act_two = [0_u8; 50];
-            self.socket.read_exact(&mut act_two).await?;
+            self.socket
+                .read_exact(&mut act_two)
+                .timeout(Duration::from_secs(1))
+                .await?;
             self.brontide.recv_act_two(act_two)?;
 
             let act_three = self.brontide.gen_act_three()?;
-            self.socket.write_all(&act_three).await?;
+            self.socket
+                .write_all(&act_three)
+                .timeout(Duration::from_secs(1))
+                .await?;
         } else {
             let mut act_one = [0_u8; 50];
-            self.socket.read_exact(&mut act_one).await?;
+            self.socket
+                .read_exact(&mut act_one)
+                .timeout(Duration::from_secs(1))
+                .await?;
             self.brontide.recv_act_one(act_one)?;
 
             let act_two = self.brontide.gen_act_two()?;
-            self.socket.write_all(&act_two).await?;
+            self.socket
+                .write_all(&act_two)
+                .timeout(Duration::from_secs(1))
+                .await?;
 
             let mut act_three = [0_u8; 66];
-            self.socket.read_exact(&mut act_three).await?;
+            self.socket
+                .read_exact(&mut act_three)
+                .timeout(Duration::from_secs(1))
+                .await?;
             self.brontide.recv_act_three(act_three)?;
         }
 
