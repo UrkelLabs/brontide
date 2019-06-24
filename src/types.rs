@@ -48,7 +48,7 @@ impl PacketSize {
             PacketSize::U32 => {
                 let length_shortened = length as u32;
                 let mut buffer = [0; 4];
-                buffer.copy_from_slice(&length_shortened.to_be_bytes());
+                buffer.copy_from_slice(&length_shortened.to_le_bytes());
                 buffer.to_vec()
             }
         }
@@ -67,7 +67,7 @@ impl PacketSize {
                 let length: u32;
                 let mut length_bytes = [0; 4];
                 length_bytes.copy_from_slice(length_buffer);
-                length = u32::from_be_bytes(length_bytes);
+                length = u32::from_le_bytes(length_bytes);
                 length as usize
             }
         }
