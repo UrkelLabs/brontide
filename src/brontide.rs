@@ -437,8 +437,6 @@ impl Brontide {
             return Err(Error::BadTag("packet header: bad tag".to_owned()));
         };
 
-        let mut message = Vec::with_capacity(length);
-
         if packet.len() != 16 + length + 18 {
             return Err(Error::PacketBadSize(format!(
                 "Expected: {}, Found: {}",
@@ -446,6 +444,8 @@ impl Brontide {
                 packet.len()
             )));
         };
+
+        let mut message = Vec::with_capacity(length);
 
         let encrypted_message = &packet[18..18 + length];
         let tag2 = Tag::from(&packet[18 + length..]);
