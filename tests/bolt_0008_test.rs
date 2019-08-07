@@ -178,7 +178,7 @@ fn test_encryption_and_key_rotation() {
     let hello = b"hello";
 
     for x in 0..1001 {
-        let packet = initiator.write(hello.to_vec()).unwrap();
+        let packet = initiator.encode(hello).unwrap();
 
         match x {
             0 => assert_eq!(
@@ -208,7 +208,7 @@ fn test_encryption_and_key_rotation() {
             _ => {}
         }
 
-        let message = responder.read(&packet).unwrap();
+        let message = responder.decode(&packet).unwrap();
 
         assert_eq!(hex::encode(message), hex::encode(hello));
     }

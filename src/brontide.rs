@@ -26,6 +26,8 @@ pub struct BrontideBuilder {
     gen_key_func: Option<fn() -> Result<SecretKey>>,
 }
 
+// ===== impl BrontideBuilder =====
+
 impl BrontideBuilder {
     pub fn new<T: Into<SecretKey>>(local_secret: T) -> Self {
         BrontideBuilder {
@@ -87,6 +89,8 @@ impl BrontideBuilder {
         brontide
     }
 }
+
+// ===== impl Brontide =====
 
 impl Brontide {
     //TODO review this, probably can remove some of these options with the builder pattern.
@@ -364,7 +368,7 @@ impl Brontide {
         Ok(())
     }
 
-    pub fn write(&mut self, data: Vec<u8>) -> Result<Vec<u8>> {
+    pub fn encode(&mut self, data: &[u8]) -> Result<Vec<u8>> {
         if self.state != ActState::Done {
             return Err(Error::HandshakeNotComplete);
         }
@@ -411,7 +415,7 @@ impl Brontide {
         Ok(packet)
     }
 
-    pub fn read(&mut self, packet: &[u8]) -> Result<Vec<u8>> {
+    pub fn decode(&mut self, packet: &[u8]) -> Result<Vec<u8>> {
         if self.state != ActState::Done {
             return Err(Error::HandshakeNotComplete);
         }

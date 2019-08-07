@@ -20,6 +20,8 @@ where
     initiator: bool,
 }
 
+// ===== impl BrontideStreamBuilder =====
+
 impl<T> BrontideStreamBuilder<T>
 where
     T: AsyncRead + AsyncWrite + AsyncReadExt + AsyncWriteExt + Unpin,
@@ -70,6 +72,8 @@ where
         }
     }
 }
+
+// ===== impl BrontideStream =====
 
 pub struct BrontideStream<T>
 where
@@ -141,7 +145,7 @@ where
             return Err(Error::HandshakeNotComplete);
         }
 
-        let encrypted_packet = self.brontide.write(data)?;
+        let encrypted_packet = self.brontide.encode(data)?;
 
         self.socket.write_all(&encrypted_packet).await?;
 
