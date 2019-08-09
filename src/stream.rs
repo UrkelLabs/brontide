@@ -17,77 +17,9 @@ use std::time::Duration;
 use runtime::net::TcpStream;
 
 //TODO going to need a brontide listener... TO make this easier.
-pub struct BrontideStreamBuilder {
-    hostname: String,
-    local_secret: SecretKey,
-    remote_public: Option<PublicKey>,
-    prologue: Option<String>,
-    packet_size: PacketSize,
-    initiator: bool,
-}
 
 //TODO build
 
-// ===== impl BrontideStreamBuilder =====
-
-impl BrontideStreamBuilder {
-    pub fn new<U: Into<SecretKey>>(hostname: &str, local_secret: U) -> Self {
-        BrontideStreamBuilder {
-            hostname: hostname.to_owned(),
-            local_secret: local_secret.into(),
-            remote_public: None,
-            prologue: None,
-            packet_size: PacketSize::U32,
-            initiator: false,
-        }
-    }
-
-    pub fn with_packet_size(mut self, size: PacketSize) -> Self {
-        self.packet_size = size;
-        self
-    }
-
-    pub fn with_prologue(mut self, prologue: &str) -> Self {
-        self.prologue = Some(prologue.to_owned());
-        self
-    }
-
-    pub fn initiator<U: Into<PublicKey>>(mut self, remote_public: U) -> Self {
-        self.remote_public = Some(remote_public.into());
-        self.initiator = true;
-        self
-    }
-
-    pub fn responder(mut self) -> Self {
-        self.remote_public = None;
-        self.initiator = false;
-        self
-    }
-
-    pub async fn connect(self) -> Result<BrontideStream> {
-        let stream = TcpStream::connect(&self.hostname).await?;
-
-        let inner = Inner {
-            waiting: HEADER_SIZE,
-            has_size: false,
-            total: 0,
-            pending: Vec::new(),
-            waker: AtomicWaker::new(),
-        };
-
-        Ok(BrontideStream {
-            stream,
-            inner,
-            brontide: Brontide::new(
-                self.initiator,
-                self.local_secret,
-                self.remote_public,
-                self.prologue,
-                self.packet_size,
-            ),
-        })
-    }
-}
 
 //Might need to be Atomic
 pub struct Inner {
