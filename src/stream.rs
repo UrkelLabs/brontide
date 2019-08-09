@@ -16,11 +16,6 @@ use std::time::Duration;
 
 use runtime::net::TcpStream;
 
-//TODO going to need a brontide listener... TO make this easier.
-
-//TODO build
-
-
 //Might need to be Atomic
 pub struct Inner {
     waiting: usize,
@@ -31,6 +26,7 @@ pub struct Inner {
     waker: AtomicWaker,
 }
 
+//Possibly make a new function, and then remove the pub crates here (TODO)
 pub struct BrontideStream {
     stream: TcpStream,
     brontide: Brontide,
@@ -40,6 +36,21 @@ pub struct BrontideStream {
 // ===== impl BrontideStream =====
 
 impl BrontideStream {
+    pub fn new(stream: TcpStream, brontide: Brontide) -> BrontideStream {
+        let inner = Inner {
+            waiting: HEADER_SIZE,
+            has_size: false,
+            total: 0,
+            pending: Vec::new(),
+            waker: AtomicWaker::new(),
+        };
+
+        BrontideStream {
+            stream,
+            brontide,
+            inner,
+        }
+    }
     pub async fn start(&mut self) -> Result<()> {
         if self.brontide.initiator() {
             let act_one = self.brontide.gen_act_one()?;

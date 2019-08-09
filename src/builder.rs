@@ -2,20 +2,27 @@ use crate::Brontide;
 use crate::Result;
 use crate::{PacketSize, PublicKey, SecretKey};
 
+//TODO see if we even need to do this at all.
+#[cfg(feature = "stream")]
+use crate::common::HEADER_SIZE;
+#[cfg(feature = "stream")]
+use crate::stream::Inner;
 #[cfg(feature = "stream")]
 use crate::BrontideStream;
+#[cfg(feature = "stream")]
+use futures::task::AtomicWaker;
 #[cfg(feature = "stream")]
 use runtime::net::TcpStream;
 
 // ===== BrontideBuilder =====
 
 pub struct BrontideBuilder {
-    initiator: bool,
-    local_secret: SecretKey,
-    remote_public: Option<PublicKey>,
-    prologue: Option<String>,
-    packet_size: PacketSize,
-    gen_key_func: Option<fn() -> Result<SecretKey>>,
+    pub(crate) initiator: bool,
+    pub(crate) local_secret: SecretKey,
+    pub(crate) remote_public: Option<PublicKey>,
+    pub(crate) prologue: Option<String>,
+    pub(crate) packet_size: PacketSize,
+    pub(crate) gen_key_func: Option<fn() -> Result<SecretKey>>,
 }
 
 // ===== impl BrontideBuilder =====
@@ -86,26 +93,15 @@ impl BrontideBuilder {
     #[cfg(feature = "stream")]
     pub async fn connect(self, hostname: &str) -> Result<BrontideStream> {
         let stream = TcpStream::connect(hostname).await?;
+        let brontide = Brontide::new(
+            self.initiator,
+            self.local_secret,
+            self.remote_public,
+            self.prologue,
+            self.packet_size,
+        );
 
-        let inner = Inner {
-            waiting: HEADER_SIZE,
-            has_size: false,
-            total: 0,
-            pending: Vec::new(),
-            waker: AtomicWaker::new(),
-        };
-
-        Ok(BrontideStream {
-            stream,
-            inner,
-            brontide: Brontide::new(
-                self.initiator,
-                self.local_secret,
-                self.remote_public,
-                self.prologue,
-                self.packet_size,
-            ),
-        })
+        Ok(BrontideStream::new(stream, brontide))
     }
 }
 

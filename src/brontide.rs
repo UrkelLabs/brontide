@@ -10,7 +10,7 @@ use crate::Result;
 use secp256k1;
 
 pub struct Brontide {
-    handshake_state: HandshakeState,
+    pub(crate) handshake_state: HandshakeState,
     send_cipher: Option<CipherState>,
     pub(crate) receive_cipher: Option<CipherState>,
     packet_size: PacketSize,
