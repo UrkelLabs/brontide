@@ -25,11 +25,10 @@ fn test_initiator_successful_handshake() {
     };
 
     let mut initiator = brontide::BrontideBuilder::new(ls_priv)
-        .with_remote_public(rs_pub)
         .with_prologue(PROLOGUE)
         .with_packet_size(brontide::PacketSize::U16)
         .with_generate_key(gen_key)
-        .initiator()
+        .initiator(rs_pub)
         .build();
 
     let act_one = initiator.gen_act_one().unwrap();
@@ -116,11 +115,10 @@ fn initiator_setup() -> brontide::Brontide {
     };
 
     let mut initiator = brontide::BrontideBuilder::new(ls_priv)
-        .with_remote_public(rs_pub)
         .with_prologue(PROLOGUE)
         .with_packet_size(brontide::PacketSize::U16)
         .with_generate_key(gen_key)
-        .initiator()
+        .initiator(rs_pub)
         .build();
 
     initiator.gen_act_one().unwrap();
