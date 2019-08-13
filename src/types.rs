@@ -1,4 +1,5 @@
 use hex;
+use std::default::Default;
 use std::{fmt, ops, str::FromStr};
 
 #[derive(Eq, PartialEq, Copy, Clone)]
@@ -14,6 +15,13 @@ pub enum PacketSize {
     U16,
     U32,
 }
+
+impl Default for PacketSize {
+    fn default() -> Self {
+        PacketSize::U32
+    }
+}
+//TODO packet struct
 
 //TODO the &[u8]'s should be converted to TryFrom not From. The error should then be Invalid Secret
 //Key/ Invalid Public Key;
