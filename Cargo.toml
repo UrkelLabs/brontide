@@ -7,7 +7,7 @@ license = "MIT"
 edition = "2018"
 
 [features]
-stream = ["futures-preview", "futures-timer"]
+stream = ["futures-preview", "futures-timer", "runtime"]
 
 [dependencies]
 chacha20-poly1305-aead = "0.1.2"
@@ -20,6 +20,7 @@ hex = "0.3.2"
 #Optional
 futures-preview = {version="=0.3.0-alpha.17", features = ["async-await", "nightly"], optional = true}
 futures-timer = {version="0.2.1", optional = true}
+runtime = {version="0.3.0-alpha.6", optional = true}
 
 [dev-dependencies]
 hex = "0.3.2"
