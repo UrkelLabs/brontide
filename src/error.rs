@@ -17,6 +17,7 @@ pub enum Error {
     //TODO build more packet errors
     PacketBadSize(String),
     HandshakeNotComplete,
+    StreamClosed,
 }
 
 impl From<std::io::Error> for Error {
@@ -50,6 +51,7 @@ impl fmt::Display for Error {
             Error::NoCipher(ref e) => write!(f, "No Cipher: {}", e),
             Error::PacketBadSize(ref e) => write!(f, "Packet Bad Size: {}", e),
             Error::HandshakeNotComplete => write!(f, "Brontide Handshake not complete"),
+            Error::StreamClosed => write!(f, "TCP Stream was closed."),
         }
     }
 }
