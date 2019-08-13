@@ -18,7 +18,7 @@ rand = "0.6.5"
 hex = "0.3.2"
 
 #Optional
-futures-preview = {version="=0.3.0-alpha.18", features = ["async-await", "nightly"], optional = true}
+futures-preview = {version="=0.3.0-alpha.17", features = ["async-await", "nightly"], optional = true}
 futures-timer = {version="0.2.1", optional = true}
 runtime = {version="0.3.0-alpha.6", optional = true}
 
