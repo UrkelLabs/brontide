@@ -164,16 +164,16 @@ impl BrontideStream {
 }
 
 impl Stream for BrontideStream {
-    type Item = Result<Vec<u8>>;
+    type Item = Vec<u8>;
     // type Item = Result<UnencryptedPacket>
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.next_message().boxed().as_mut().poll(cx) {
             Poll::Pending => Poll::Pending,
-            // Poll::Ready(Err(e)) => Poll::Ready(None),
-            Poll::Ready(value) => Poll::Ready(Some(value)),
             //TODO I think if we receive an error from the value (Timeout error), then we close the
             //stream.
+            Poll::Ready(Err(e)) => Poll::Ready(None),
+            Poll::Ready(Ok(value)) => Poll::Ready(Some(value)),
         }
     }
 }
