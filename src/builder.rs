@@ -1,16 +1,7 @@
-use crate::Brontide;
-use crate::Result;
-use crate::{PacketSize, PublicKey, SecretKey};
+use crate::{Brontide, PacketSize, PublicKey, Result, SecretKey};
 
-//TODO see if we even need to do this at all.
-#[cfg(feature = "stream")]
-use crate::common::HEADER_SIZE;
-#[cfg(feature = "stream")]
-use crate::stream::Inner;
 #[cfg(feature = "stream")]
 use crate::BrontideStream;
-#[cfg(feature = "stream")]
-use futures::task::AtomicWaker;
 #[cfg(feature = "stream")]
 use runtime::net::TcpStream;
 
@@ -40,11 +31,6 @@ impl BrontideBuilder {
             packet_size: PacketSize::U32,
             gen_key_func: None,
         }
-    }
-
-    pub fn with_remote_public<T: Into<PublicKey>>(mut self, remote_public: T) -> Self {
-        self.remote_public = Some(remote_public.into());
-        self
     }
 
     pub fn with_prologue(mut self, prologue: &str) -> Self {
@@ -91,18 +77,35 @@ impl BrontideBuilder {
     }
 
     #[cfg(feature = "stream")]
-    pub async fn connect(self, hostname: &str) -> Result<BrontideStream> {
+    pub async fn connect<U: Into<PublicKey>>(
+        self,
+        hostname: &str,
+        remote_public: U,
+    ) -> Result<BrontideStream> {
         let stream = TcpStream::connect(hostname).await?;
+        //Initiator false
         let brontide = Brontide::new(
-            self.initiator,
+            true,
+            self.local_secret,
+            Some(remote_public.into()),
+            self.prologue,
+            self.packet_size,
+        );
+
+        BrontideStream::connect(stream, brontide).await
+    }
+
+    #[cfg(feature = "stream")]
+    pub async fn accept(self, stream: TcpStream) -> Result<BrontideStream> {
+        //initiator = False
+        let brontide = Brontide::new(
+            false,
             self.local_secret,
             self.remote_public,
             self.prologue,
             self.packet_size,
         );
 
-        Ok(BrontideStream::new(stream, brontide))
+        BrontideStream::accept(stream, brontide).await
     }
 }
-
-//TODO add listen might also be "bind"
