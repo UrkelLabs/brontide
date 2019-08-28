@@ -13,7 +13,7 @@ stream = ["futures-preview", "futures-timer", "runtime"]
 chacha20-poly1305-aead = "0.1.2"
 hkdf = "0.7"
 sha2 = "0.8.0"
-secp256k1 = { version="0.13.0", features = ["rand"]}
+secp256k1 = { version="0.15.3", features = ["rand"]}
 rand = "0.6.5"
 hex = "0.3.2"
 
