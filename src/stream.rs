@@ -10,7 +10,8 @@ use futures::task::Poll;
 use futures::FutureExt;
 use futures::Stream;
 use futures::{ready, Future};
-use futures_timer::FutureExt as _;
+use runtime::time::FutureExt as _;
+
 use std::io;
 use std::mem;
 use std::pin::Pin;
