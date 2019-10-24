@@ -30,6 +30,10 @@ before_cache:
     fi
   - rm -rf /home/travis/.cargo/registry
 
+before_script:
+  - cargo install --force cargo-audit
+  - cargo generate-lockfile
+
 script:
 - cargo clean
 - |
@@ -39,6 +43,7 @@ script:
         cargo build
     fi
 - cargo test
+- cargo audit
 
 after_success: |
   if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
