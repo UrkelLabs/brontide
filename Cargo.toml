@@ -1,7 +1,7 @@
 [package]
 name = "brontide"
 version = "0.0.0"
-authors = ["kilpatty <seanpkilgarriff@gmail.com>"]
+authors = ["kilpatty <sean@urkel.io>"]
 description = "A rust implementation of Handshake and Lightning Network's secure messaging protocol - based on Noise"
 license = "MIT"
 edition = "2018"
@@ -18,7 +18,7 @@ rand = "0.6.5"
 hex = "0.3.2"
 
 #Optional
-futures-preview = {version="=0.3.0-alpha.18", features = ["async-await", "nightly"], optional = true}
+futures-preview = {version="=0.3.0-alpha.19", features = ["async-await"], optional = true}
 runtime = {version="0.3.0-alpha.7", optional = true}
 
 [dev-dependencies]

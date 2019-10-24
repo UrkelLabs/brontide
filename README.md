@@ -1,4 +1,4 @@
-# Rust-Brontide
+# Brontide
 [![Build Status](https://travis-ci.org/HandshakeAlliance/rust-brontide.svg?branch=master)](https://travis-ci.org/HandshakeAlliance/rust-brontide)
 [![codecov](https://codecov.io/gh/HandshakeAlliance/rust-brontide/branch/master/graph/badge.svg)](https://codecov.io/gh/HandshakeAlliance/rust-brontide)
 [![Documentation][docs-badge]][docs-url]
@@ -15,3 +15,16 @@ A majority of Rust-Brontide is available on stable Rust. When compiling on stabl
 In order for ease of use, we have also included a Brontide Stream structure that handles incoming and outgoing sockets. This 
 feature requires nightly as it makes heavy use of async/await and futures. These will be stable in 1.37 which should be released early August,
 at which point we will remove the nightly requirement.
+
+Brontide exposes two main structs to interact with the library. Brontide and BrontideStream. BrontideStream is only available if compiling with the stream feature and requires nightly.
+Both of theses structs are built using the builder pattern. 
+
+### Brontide 
+
+Show examples here
+TODO
+
+BrontideStream -
+
+Show examples here.
+TODO
