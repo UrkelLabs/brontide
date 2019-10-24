@@ -1,7 +1,10 @@
 #![feature(async_await)]
 
+#[cfg(feature="stream")]
 use brontide::BrontideBuilder;
+#[cfg(feature="stream")]
 use futures::StreamExt;
+#[cfg(feature="stream")]
 use runtime;
 use secp256k1;
 
@@ -26,6 +29,7 @@ use secp256k1;
 ////TODO ensure these tests are only enabled on the proper feature.
 ////Which is stream. -> We should consider just removing features though and making this lib unstable
 ////and useable only on nightly. By the time nightly is stable, HNS will maybe still not be launched.
+#[cfg(feature="stream")]
 #[runtime::test]
 async fn test_brontide_stream() {
     //TODO break this into it's own setup.
