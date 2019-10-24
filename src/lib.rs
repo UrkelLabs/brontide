@@ -1,5 +1,3 @@
-#![cfg_attr(feature = "stream", feature(async_await))]
-
 //TODO check which should be public
 pub mod acts;
 pub mod brontide;

@@ -1,12 +1,9 @@
-#![feature(async_await)]
-
 #[cfg(feature="stream")]
 use brontide::BrontideBuilder;
 #[cfg(feature="stream")]
 use futures::StreamExt;
 #[cfg(feature="stream")]
 use runtime;
-use secp256k1;
 
 //TODO biggest thing to test with this is that streams can work out of order.
 // Stream A connects
