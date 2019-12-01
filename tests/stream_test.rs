@@ -10,7 +10,7 @@ use async_std::task;
 use brontide::{BrontideBuilder, BrontideStream};
 #[cfg(feature = "stream")]
 use futures::{AsyncReadExt, AsyncWriteExt, StreamExt};
-
+#[cfg(feature = "stream")]
 use std::time::Duration;
 
 //@todo clean up the above.
@@ -90,9 +90,9 @@ async fn test_brontide_stream() {
 // Listener return act_two
 // Stream B sends act_three
 // Stream B should be the ready first.
-// This test runs the above process up to 5 times. If it works correctly at least once, we pass the
+// This test runs the above process up to 20 times. If it works correctly at least once, we pass the
 // tests. The test executor is shared amongst all the test cases, so sometimes it occurs that the
-// streams were not processed in order. If they are not processed in order 5 times, then we fail
+// streams were not processed in order. If they are not processed in order 20 times, then we fail
 // the test and know that there are real errors occuring.
 #[cfg(feature = "stream")]
 #[async_std::test]
@@ -105,7 +105,7 @@ async fn test_brontide_out_of_order_streams() {
 
     let mut correct_order_once = false;
 
-    for _i in 0u32..4u32 {
+    for _i in 0u32..20u32 {
         let mut pub_key = [0_u8; 33];
         pub_key.copy_from_slice(
             &hex::decode("031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f")

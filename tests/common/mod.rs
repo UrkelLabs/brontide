@@ -3,9 +3,9 @@ use async_std;
 #[cfg(feature = "stream")]
 use brontide::BrontideBuilder;
 #[cfg(feature = "stream")]
-use futures::StreamExt;
-
 use brontide::Result;
+#[cfg(feature = "stream")]
+use futures::StreamExt;
 
 #[cfg(feature = "stream")]
 pub async fn stream_listener_oneshot_setup(address: &str) -> Result<()> {

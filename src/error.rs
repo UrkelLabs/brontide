@@ -44,7 +44,7 @@ impl From<secp256k1::Error> for Error {
 
 #[cfg(feature = "stream")]
 impl From<TimeoutError> for Error {
-    fn from(e: TimeoutError) -> Self {
+    fn from(_e: TimeoutError) -> Self {
         Error::Timeout
     }
 }
