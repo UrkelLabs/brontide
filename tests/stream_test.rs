@@ -96,6 +96,7 @@ async fn test_brontide_stream() {
 // the test and know that there are real errors occuring.
 #[cfg(feature = "stream")]
 #[async_std::test]
+#[ignore]
 async fn test_brontide_out_of_order_streams() {
     async_std::task::spawn(async move {
         stream_listener_oneshot_setup("0.0.0.0:13039")
