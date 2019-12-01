@@ -1,15 +1,17 @@
 [package]
 name = "brontide"
 version = "0.0.0"
-authors = ["kilpatty <sean@urkel.io>"]
+authors = ["Urkel Engineering <engineering@urkel.io>"]
 description = "A rust implementation of Handshake and Lightning Network's secure messaging protocol - based on Noise"
 license = "MIT"
 edition = "2018"
 
 [features]
-stream = ["futures-preview", "runtime"]
+stream = ["futures", "async-std"]
 
 [dependencies]
+
+#Unknown External
 chacha20-poly1305-aead = "0.1.2"
 hkdf = "0.7"
 sha2 = "0.8.0"
@@ -17,12 +19,11 @@ secp256k1 = { version="0.15.3", features = ["rand"]}
 rand = "0.6.5"
 hex = "0.3.2"
 
-#Optional
-futures-preview = {version="=0.3.0-alpha.19", features = ["async-await"], optional = true}
-runtime = {version="0.3.0-alpha.7", optional = true}
+# Optional
+futures = { version="0.3.1", optional = true }
+async-std = { version="1.2.0", features = ["attributes"], optional = true }
 
 [dev-dependencies]
-hex = "0.3.2"
 criterion = "0.2"
 
 [[bench]]

@@ -10,7 +10,6 @@ use futures::task::Poll;
 use futures::FutureExt;
 use futures::Stream;
 use futures::{ready, Future};
-use runtime::time::FutureExt as _;
 
 use std::io;
 use std::mem;
@@ -18,7 +17,8 @@ use std::pin::Pin;
 use std::time::Duration;
 //TODO clean up all these ^ remove unused, and organize.
 
-use runtime::net::TcpStream;
+use async_std::future::timeout;
+use async_std::net::TcpStream;
 
 pub struct BrontideStream {
     stream: TcpStream,
@@ -35,26 +35,18 @@ impl BrontideStream {
     pub async fn connect(stream: TcpStream, brontide: Brontide) -> Result<BrontideStream> {
         let mut bstream = BrontideStream::new(stream, brontide);
         let act_one = bstream.brontide.gen_act_one()?;
-        bstream
-            .stream
-            .write_all(&act_one)
-            .timeout(Duration::from_secs(1))
-            .await?;
+        timeout(Duration::from_secs(1), bstream.stream.write_all(&act_one)).await?;
 
         let mut act_two = [0_u8; 50];
-        bstream
-            .stream
-            .read_exact(&mut act_two)
-            .timeout(Duration::from_secs(1))
-            .await?;
+        timeout(
+            Duration::from_secs(1),
+            bstream.stream.read_exact(&mut act_two),
+        )
+        .await?;
         bstream.brontide.recv_act_two(act_two)?;
 
         let act_three = bstream.brontide.gen_act_three()?;
-        bstream
-            .stream
-            .write_all(&act_three)
-            .timeout(Duration::from_secs(1))
-            .await?;
+        timeout(Duration::from_secs(1), bstream.stream.write_all(&act_three)).await?;
 
         Ok(bstream)
     }
@@ -62,26 +54,22 @@ impl BrontideStream {
     pub async fn accept(stream: TcpStream, brontide: Brontide) -> Result<BrontideStream> {
         let mut bstream = BrontideStream::new(stream, brontide);
         let mut act_one = [0_u8; 50];
-        bstream
-            .stream
-            .read_exact(&mut act_one)
-            .timeout(Duration::from_secs(1))
-            .await?;
+        timeout(
+            Duration::from_secs(1),
+            bstream.stream.read_exact(&mut act_one),
+        )
+        .await?;
         bstream.brontide.recv_act_one(act_one)?;
 
         let act_two = bstream.brontide.gen_act_two()?;
-        bstream
-            .stream
-            .write_all(&act_two)
-            .timeout(Duration::from_secs(1))
-            .await?;
+        timeout(Duration::from_secs(1), bstream.stream.write_all(&act_two)).await?;
 
         let mut act_three = [0_u8; 66];
-        bstream
-            .stream
-            .read_exact(&mut act_three)
-            .timeout(Duration::from_secs(1))
-            .await?;
+        timeout(
+            Duration::from_secs(1),
+            bstream.stream.read_exact(&mut act_three),
+        )
+        .await?;
         bstream.brontide.recv_act_three(act_three)?;
 
         Ok(bstream)

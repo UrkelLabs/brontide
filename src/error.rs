@@ -1,3 +1,5 @@
+#[cfg(feature = "stream")]
+use async_std::future::TimeoutError;
 use hex::FromHexError;
 use secp256k1;
 use std;
@@ -18,6 +20,8 @@ pub enum Error {
     PacketBadSize(String),
     HandshakeNotComplete,
     StreamClosed,
+    #[cfg(feature = "stream")]
+    Timeout(TimeoutError),
 }
 
 impl From<std::io::Error> for Error {
@@ -38,6 +42,13 @@ impl From<secp256k1::Error> for Error {
     }
 }
 
+#[cfg(feature = "stream")]
+impl From<TimeoutError> for Error {
+    fn from(e: TimeoutError) -> Self {
+        Error::Timeout(e)
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -52,6 +63,8 @@ impl fmt::Display for Error {
             Error::PacketBadSize(ref e) => write!(f, "Packet Bad Size: {}", e),
             Error::HandshakeNotComplete => write!(f, "Brontide Handshake not complete"),
             Error::StreamClosed => write!(f, "TCP Stream was closed."),
+            #[cfg(feature = "stream")]
+            Error::Timeout(ref e) => write!(f, "Timeout Error: {}", e),
         }
     }
 }
