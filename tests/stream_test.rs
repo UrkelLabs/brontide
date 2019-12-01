@@ -1,8 +1,8 @@
-#[cfg(feature="stream")]
+#[cfg(feature = "stream")]
 use brontide::BrontideBuilder;
-#[cfg(feature="stream")]
+#[cfg(feature = "stream")]
 use futures::StreamExt;
-#[cfg(feature="stream")]
+#[cfg(feature = "stream")]
 use runtime;
 
 //TODO biggest thing to test with this is that streams can work out of order.
@@ -26,29 +26,26 @@ use runtime;
 ////TODO ensure these tests are only enabled on the proper feature.
 ////Which is stream. -> We should consider just removing features though and making this lib unstable
 ////and useable only on nightly. By the time nightly is stable, HNS will maybe still not be launched.
-#[cfg(feature="stream")]
+#[cfg(feature = "stream")]
 #[runtime::test]
 async fn test_brontide_stream() {
     //TODO break this into it's own setup.
-    runtime::spawn( async move {
+    runtime::spawn(async move {
         let mut listener = runtime::net::TcpListener::bind("0.0.0.0:13038").unwrap();
         let mut incoming = listener.incoming();
         while let Some(stream) = incoming.next().await {
             // let stream = stream?;
             let stream = stream.unwrap();
 
-            runtime::spawn( async move {
-                let mut accepted_stream = BrontideBuilder::new([1; 32]).accept(stream).await.unwrap();
+            runtime::spawn(async move {
+                let mut accepted_stream =
+                    BrontideBuilder::new([1; 32]).accept(stream).await.unwrap();
                 accepted_stream.write(b"hello").await;
                 // accepted_stream.write(b"olleh").await;
                 // accepted_stream.write(b"hello").await;
                 // loop {}
-
             });
-
-
         }
-
     });
     let mut pub_key = [0_u8; 33];
     pub_key.copy_from_slice(
@@ -63,7 +60,6 @@ async fn test_brontide_stream() {
     while let Some(packet) = stream.next().await {
         assert_eq!(packet, b"hello");
     }
-
 }
 //
 

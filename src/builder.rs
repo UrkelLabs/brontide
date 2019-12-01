@@ -70,7 +70,8 @@ impl BrontideBuilder {
         let mut brontide = Brontide::new(
             self.initiator,
             self.local_secret,
-            self.remote_public, self.prologue,
+            self.remote_public,
+            self.prologue,
             self.packet_size,
         );
 
