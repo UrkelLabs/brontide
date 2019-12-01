@@ -35,7 +35,7 @@ Both of theses structs are built using the builder pattern.
     initiator.recv_act_two(act_two)?;
 
     ...
-        ```
+```
 
 ### BrontideStream 
 
@@ -66,6 +66,4 @@ let mut stream = BrontideBuilder::new(ls_priv)
 while let Some(packet) = stream.next().await {
     assert_eq!(packet, b"hello");
 }
-
-
 ```
