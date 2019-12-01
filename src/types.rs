@@ -247,6 +247,7 @@ impl From<[u8; 33]> for PublicKey {
     }
 }
 
+//@todo fromHex, toHex
 impl FromStr for PublicKey {
     type Err = hex::FromHexError;
 

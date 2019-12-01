@@ -1,24 +1,17 @@
 use crate::brontide::Brontide;
 use crate::common::HEADER_SIZE;
 use crate::error::Error;
-use crate::types::{ActState, PacketSize, PublicKey, SecretKey, Tag};
+use crate::types::{ActState, Tag};
 use crate::Result;
-use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use futures::task::AtomicWaker;
-use futures::task::Context;
-use futures::task::Poll;
-use futures::FutureExt;
-use futures::Stream;
-use futures::{ready, Future};
-
-use std::io;
-use std::mem;
-use std::pin::Pin;
-use std::time::Duration;
-//TODO clean up all these ^ remove unused, and organize.
-
 use async_std::future::timeout;
 use async_std::net::TcpStream;
+use futures::io::{AsyncReadExt, AsyncWriteExt};
+use futures::task::{Context, Poll};
+use futures::{FutureExt, Stream};
+use std::pin::Pin;
+use std::time::Duration;
+
+// ===== struct BrontideStream =====
 
 //Making public until we can clean up tests @todo
 // #[derive(Debug)] //@todo
@@ -37,6 +30,8 @@ impl BrontideStream {
     pub async fn connect(stream: TcpStream, brontide: Brontide) -> Result<BrontideStream> {
         let mut bstream = BrontideStream::new(stream, brontide);
         let act_one = bstream.brontide.gen_act_one()?;
+
+        //These double ?? can be removed when timeout is stable on stream in async-std
         timeout(Duration::from_secs(1), bstream.stream.write_all(&act_one)).await??;
 
         let mut act_two = [0_u8; 50];
@@ -163,7 +158,7 @@ impl Stream for BrontideStream {
             Poll::Pending => Poll::Pending,
             //TODO I think if we receive an error from the value (Timeout error), then we close the
             //stream.
-            Poll::Ready(Err(e)) => Poll::Ready(None),
+            Poll::Ready(Err(_e)) => Poll::Ready(None),
             Poll::Ready(Ok(value)) => Poll::Ready(Some(value)),
         }
     }
