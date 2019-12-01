@@ -16,6 +16,7 @@ use std::time::Duration;
 //@todo clean up the above.
 
 mod common;
+#[cfg(feature = "stream")]
 use common::stream_listener_oneshot_setup;
 
 ////3. Test stream returns
