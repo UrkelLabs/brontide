@@ -5,6 +5,7 @@ use brontide::BrontideBuilder;
 #[cfg(feature = "stream")]
 use futures::StreamExt;
 
+
 //TODO biggest thing to test with this is that streams can work out of order.
 // Stream A connects
 // Stream B connects
@@ -34,6 +35,7 @@ async fn test_brontide_stream() {
         let listener = async_std::net::TcpListener::bind("0.0.0.0:13038")
             .await
             .unwrap();
+      
         let mut incoming = listener.incoming();
         while let Some(stream) = incoming.next().await {
             // let stream = stream?;
