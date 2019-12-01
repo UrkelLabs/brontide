@@ -20,9 +20,10 @@ use std::time::Duration;
 use async_std::future::timeout;
 use async_std::net::TcpStream;
 
+//Making public until we can clean up tests @todo
 pub struct BrontideStream {
-    stream: TcpStream,
-    brontide: Brontide,
+    pub stream: TcpStream,
+    pub brontide: Brontide,
 }
 
 // ===== impl BrontideStream =====
