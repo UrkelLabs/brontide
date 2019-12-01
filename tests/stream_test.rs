@@ -5,7 +5,6 @@ use brontide::BrontideBuilder;
 #[cfg(feature = "stream")]
 use futures::StreamExt;
 
-
 //TODO biggest thing to test with this is that streams can work out of order.
 // Stream A connects
 // Stream B connects
@@ -24,9 +23,6 @@ use futures::StreamExt;
 ////5. Test opening up a stream, and then not having the handshake done.
 ////If Handshake is complete is some time period, the stream should auto-rewake and read messages.
 
-////TODO ensure these tests are only enabled on the proper feature.
-////Which is stream. -> We should consider just removing features though and making this lib unstable
-////and useable only on nightly. By the time nightly is stable, HNS will maybe still not be launched.
 #[cfg(feature = "stream")]
 #[async_std::test]
 async fn test_brontide_stream() {
@@ -35,7 +31,7 @@ async fn test_brontide_stream() {
         let listener = async_std::net::TcpListener::bind("0.0.0.0:13038")
             .await
             .unwrap();
-      
+
         let mut incoming = listener.incoming();
         while let Some(stream) = incoming.next().await {
             // let stream = stream?;
