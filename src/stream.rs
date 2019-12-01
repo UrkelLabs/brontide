@@ -21,6 +21,7 @@ use async_std::future::timeout;
 use async_std::net::TcpStream;
 
 //Making public until we can clean up tests @todo
+// #[derive(Debug)] //@todo
 pub struct BrontideStream {
     pub stream: TcpStream,
     pub brontide: Brontide,
@@ -36,18 +37,18 @@ impl BrontideStream {
     pub async fn connect(stream: TcpStream, brontide: Brontide) -> Result<BrontideStream> {
         let mut bstream = BrontideStream::new(stream, brontide);
         let act_one = bstream.brontide.gen_act_one()?;
-        timeout(Duration::from_secs(1), bstream.stream.write_all(&act_one)).await?;
+        timeout(Duration::from_secs(1), bstream.stream.write_all(&act_one)).await??;
 
         let mut act_two = [0_u8; 50];
         timeout(
             Duration::from_secs(1),
             bstream.stream.read_exact(&mut act_two),
         )
-        .await?;
+        .await??;
         bstream.brontide.recv_act_two(act_two)?;
 
         let act_three = bstream.brontide.gen_act_three()?;
-        timeout(Duration::from_secs(1), bstream.stream.write_all(&act_three)).await?;
+        timeout(Duration::from_secs(1), bstream.stream.write_all(&act_three)).await??;
 
         Ok(bstream)
     }
@@ -59,18 +60,18 @@ impl BrontideStream {
             Duration::from_secs(1),
             bstream.stream.read_exact(&mut act_one),
         )
-        .await?;
+        .await??;
         bstream.brontide.recv_act_one(act_one)?;
 
         let act_two = bstream.brontide.gen_act_two()?;
-        timeout(Duration::from_secs(1), bstream.stream.write_all(&act_two)).await?;
+        timeout(Duration::from_secs(1), bstream.stream.write_all(&act_two)).await??;
 
         let mut act_three = [0_u8; 66];
         timeout(
             Duration::from_secs(1),
             bstream.stream.read_exact(&mut act_three),
         )
-        .await?;
+        .await??;
         bstream.brontide.recv_act_three(act_three)?;
 
         Ok(bstream)

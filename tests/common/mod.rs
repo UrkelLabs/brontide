@@ -5,19 +5,32 @@ use brontide::BrontideBuilder;
 #[cfg(feature = "stream")]
 use futures::StreamExt;
 
+use brontide::Result;
+
 #[cfg(feature = "stream")]
-pub async fn stream_listener_oneshot_setup(address: &str) {
-    let listener = async_std::net::TcpListener::bind(address).await.unwrap();
+pub async fn stream_listener_oneshot_setup(address: &str) -> Result<()> {
+    let listener = async_std::net::TcpListener::bind(address).await?;
 
     let mut incoming = listener.incoming();
     while let Some(stream) = incoming.next().await {
-        let stream = stream.unwrap();
+        let stream = stream?;
 
-        async_std::task::spawn(async move {
-            let mut accepted_stream = BrontideBuilder::new([1; 32]).accept(stream).await.unwrap();
+        let result = async_std::task::spawn(async move {
+            let mut accepted_stream = BrontideBuilder::new([1; 32]).accept(stream).await?;
+
             accepted_stream.write(b"hello").await.unwrap();
+
+            Ok(())
         });
+
+        let result = result.await;
+
+        if result.is_err() {
+            return result;
+        }
     }
+
+    Ok(())
 }
 
 // #[cfg(feature = "stream")]
