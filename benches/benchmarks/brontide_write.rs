@@ -8,7 +8,7 @@ fn brontide_write_benchmark(c: &mut Criterion) {
     c.bench_function("brontide write", |b| {
         b.iter_with_setup(
             || BrontideBuilder::new([1; 32]).build(),
-            |mut v| v.write(black_box("hello".as_bytes().to_vec())),
+            |mut v| v.encode(black_box(b"hello")),
         );
     });
 }
