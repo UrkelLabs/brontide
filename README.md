@@ -19,7 +19,7 @@ Both of theses structs are built using the builder pattern.
 ### Brontide 
 
 ```
-    // Get the remove static public key.
+    // Get the remote static public key.
     let mut rs_pub = PublicKey.from_str("028d7500dd4c12685d1f568b4c2b5048e8534b873319f3a8daa612b469132ec7f7")?;
 
     // Build the local static private key.
