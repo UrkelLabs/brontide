@@ -3,7 +3,7 @@ use crate::{Brontide, PacketSize, PublicKey, Result, SecretKey};
 #[cfg(feature = "stream")]
 use crate::BrontideStream;
 #[cfg(feature = "stream")]
-use runtime::net::TcpStream;
+use async_std::net::TcpStream;
 
 // ===== BrontideBuilder =====
 
