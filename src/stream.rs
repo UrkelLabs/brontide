@@ -12,10 +12,12 @@ use std::pin::Pin;
 use std::time::Duration;
 
 // ===== struct BrontideStream =====
-//
+
+//Making public until we can clean up tests @todo
+// #[derive(Debug)] //@todo
 pub struct BrontideStream {
-    stream: TcpStream,
-    brontide: Brontide,
+    pub stream: TcpStream,
+    pub brontide: Brontide,
 }
 
 // ===== impl BrontideStream =====
@@ -28,6 +30,7 @@ impl BrontideStream {
     pub async fn connect(stream: TcpStream, brontide: Brontide) -> Result<BrontideStream> {
         let mut bstream = BrontideStream::new(stream, brontide);
         let act_one = bstream.brontide.gen_act_one()?;
+
         //These double ?? can be removed when timeout is stable on stream in async-std
         timeout(Duration::from_secs(1), bstream.stream.write_all(&act_one)).await??;
 

@@ -21,7 +21,7 @@ pub enum Error {
     HandshakeNotComplete,
     StreamClosed,
     #[cfg(feature = "stream")]
-    Timeout(TimeoutError),
+    Timeout,
 }
 
 impl From<std::io::Error> for Error {
@@ -44,8 +44,8 @@ impl From<secp256k1::Error> for Error {
 
 #[cfg(feature = "stream")]
 impl From<TimeoutError> for Error {
-    fn from(e: TimeoutError) -> Self {
-        Error::Timeout(e)
+    fn from(_e: TimeoutError) -> Self {
+        Error::Timeout
     }
 }
 
@@ -64,7 +64,7 @@ impl fmt::Display for Error {
             Error::HandshakeNotComplete => write!(f, "Brontide Handshake not complete"),
             Error::StreamClosed => write!(f, "TCP Stream was closed."),
             #[cfg(feature = "stream")]
-            Error::Timeout(ref e) => write!(f, "Timeout Error: {}", e),
+            Error::Timeout => write!(f, "Timeout Error"),
         }
     }
 }
