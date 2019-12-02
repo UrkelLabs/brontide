@@ -19,12 +19,12 @@ pub enum Error {
     ActThreeBadVersion,
     ActThreeBadKey,
     ActThreeBadTag,
-    PacketBadTag,
     BadTag(String),
     DataTooLarge(String),
     NoCipher(String),
     //TODO build more packet errors
     PacketBadSize(String),
+    PacketBadTag,
     HandshakeNotComplete,
     StreamClosed,
     #[cfg(feature = "stream")]
