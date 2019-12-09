@@ -28,16 +28,13 @@ impl Brontide {
         prologue: Option<String>,
         packet_size: PacketSize,
     ) -> Self {
-        //I think Prologue needs to be an option here actually.
-        //Copy the loop below this instead.
-        let brontide_prologue: String;
-        if prologue.is_some() {
-            brontide_prologue = prologue.unwrap();
-        } else {
-            brontide_prologue = PROLOGUE.to_owned();
+        let brontide_prologue = match prologue {
+            Some(prologue) => prologue,
+            None => PROLOGUE.to_owned(),
         };
-        //TODO rename local pub
 
+        //TODO rename local pub
+        //@todo I think this whole thing can be removed.
         let remote_pub_key: Option<PublicKey>;
 
         if let Some(key) = remote_pub {
@@ -91,7 +88,7 @@ impl Brontide {
         let act_one = ActOne::from(act_one_bytes);
 
         if act_one.version() != VERSION {
-            return Err(Error::Version("Act one: bad version.".to_owned()));
+            return Err(Error::ActOneBadVersion);
         }
 
         let e = act_one.key();
@@ -101,7 +98,7 @@ impl Brontide {
         let result = secp256k1::PublicKey::from_slice(&e);
 
         if result.is_err() {
-            return Err(Error::BadKey("Act one: bad key.".to_owned()));
+            return Err(Error::ActOneBadKey);
         }
 
         //e
@@ -123,7 +120,7 @@ impl Brontide {
             .symmetric
             .decrypt_hash(&[], p, &mut plain_text)
         {
-            return Err(Error::BadTag("Act one: bad tag".to_owned()));
+            return Err(Error::ActOneBadTag);
         }
 
         //Set internal state to act one.
@@ -164,7 +161,7 @@ impl Brontide {
         let act_two = ActTwo::from(act_two_bytes);
 
         if act_two.version() != VERSION {
-            return Err(Error::Version("Act two: bad version.".to_owned()));
+            return Err(Error::ActTwoBadVersion);
         }
 
         let e = act_two.key();
@@ -173,7 +170,7 @@ impl Brontide {
         let result = secp256k1::PublicKey::from_slice(&e);
 
         if result.is_err() {
-            return Err(Error::BadKey("Act two: bad key.".to_owned()));
+            return Err(Error::ActTwoBadKey);
         }
 
         //e
@@ -195,7 +192,7 @@ impl Brontide {
             .symmetric
             .decrypt_hash(&[], p, &mut plain_text)
         {
-            return Err(Error::BadTag("Act two: bad tag.".to_owned()));
+            return Err(Error::ActTwoBadTag);
         }
 
         //Set internal state to act two.
@@ -242,7 +239,7 @@ impl Brontide {
         let act_three = ActThree::from(act_three_bytes);
 
         if act_three.version() != VERSION {
-            return Err(Error::Version("Act three: bad version.".to_owned()));
+            return Err(Error::ActThreeBadVersion);
         }
 
         let s1 = act_three.key();
@@ -258,7 +255,7 @@ impl Brontide {
             .symmetric
             .decrypt_hash(&s1, p1, &mut plain_text)
         {
-            return Err(Error::BadTag("Act three: bad tag.".to_owned()));
+            return Err(Error::ActThreeBadTag);
         }
 
         let remote_public = plain_text;
@@ -266,7 +263,7 @@ impl Brontide {
         let result = secp256k1::PublicKey::from_slice(&remote_public);
 
         if result.is_err() {
-            return Err(Error::BadKey("Act three: bad key.".to_owned()));
+            return Err(Error::ActThreeBadKey);
         }
 
         self.handshake_state.remote_static = PublicKey::from(remote_public.as_slice());
@@ -284,7 +281,7 @@ impl Brontide {
             .symmetric
             .decrypt_hash(s2, p2, &mut plain_text)
         {
-            return Err(Error::BadTag("Act three: bad tag.".to_owned()));
+            return Err(Error::ActThreeBadTag);
         }
 
         self.split();
@@ -365,7 +362,7 @@ impl Brontide {
         if result {
             length = self.packet_size.length(&plain_text);
         } else {
-            return Err(Error::BadTag("packet header: bad tag".to_owned()));
+            return Err(Error::PacketBadTag);
         };
 
         if packet.len() != 16 + length + 18 {
@@ -387,7 +384,7 @@ impl Brontide {
             .ok_or_else(|| Error::NoCipher("receive cipher not initalized".to_owned()))?
             .decrypt(encrypted_message, tag2, &[], &mut message)
         {
-            return Err(Error::BadTag("packet message: bad tag".to_owned()));
+            return Err(Error::PacketBadTag);
         };
 
         Ok(message)
